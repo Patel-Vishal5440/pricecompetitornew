@@ -1,0 +1,178 @@
+/* Common DataTables Styling */
+table.dataTable thead th,
+table.dataTable tbody td {
+    padding: 6px 8px !important;
+    vertical-align: middle !important;
+    text-align: center !important;
+    white-space: nowrap;
+}
+
+th, td {
+    font-size: 14px;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+th.text-center, td.text-center {
+    text-align: center !important;
+}
+
+th.text-start, td.text-start {
+    text-align: left !important;
+}
+
+.product-name-wrap,
+.competitor-name-wrap {
+    max-width: 250px;
+    white-space: normal !important;
+    word-break: break-word;
+    text-align: left !important;
+}
+
+th.userDatatable-header, 
+#datatable thead th {
+    height: 50px !important;
+    vertical-align: middle !important;
+}
+
+#datatable tbody tr {
+    height: 50px !important;
+}
+
+.input-container {
+    position: relative;
+}
+
+.input-icon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+}
+
+.input-icon.icon-left {
+    left: 10px;
+}
+
+.input-icon.icon-right {
+    right: 10px;
+}
+
+.form-control-default {
+    padding-left: 35px;
+    padding-right: 35px;
+}
+
+mark {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+.btn:disabled {
+    cursor: not-allowed;
+}
+
+#search-error {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    padding: 5px 10px;
+    margin-top: 5px;
+    font-size: 0.875em;
+}
+
+/* Pagination Styling */
+.pagination-container {
+    display: flex;
+    align-items: center;
+}
+
+.pagination {
+    margin: 0;
+    gap: 5px;
+}
+
+.pagination .page-link {
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+    color: #495057;
+    padding: 0.45rem 0.5rem;
+    font-size: 0.75rem;
+    transition: all 0.2s ease-in-out;
+    min-width: 32px;
+    text-align: center;
+}
+
+.pagination .page-link:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    color: #495057;
+    text-decoration: none;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: white;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+    cursor: not-allowed;
+}
+
+/* Responsive pagination */
+@media (max-width: 768px) {
+    .d-flex.justify-content-between.align-items-center {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch !important;
+    }
+    
+    .pagination-container {
+        justify-content: center;
+    }
+    
+    .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
+/* Per page selector styling */
+.per_page {
+    min-width: 60px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.per_page:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Tooltip styling */
+.tooltip-long {
+    max-width: 300px !important;
+}
+
+.tooltip-long .tooltip-inner {
+    max-width: 300px !important;
+    text-align: left;
+    word-break: break-word;
+} 
+div.dataTables_wrapper div.dataTables_paginate ul.pagination
+{
+    align-items: center;
+}

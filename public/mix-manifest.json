@@ -1,0 +1,8 @@
+{
+    "/js/app.js": "/js/app.js",
+    "/js/alpinejs.cdn.min.js": "/js/alpinejs.cdn.min.js",
+    "/css/app.css": "/css/app.css",
+    "/css/buttons.bootstrap5.css": "/css/buttons.bootstrap5.css",
+    "/css/dataTables.bootstrap5.css": "/css/dataTables.bootstrap5.css",
+    "/css/toastr.css": "/css/toastr.css"
+}
