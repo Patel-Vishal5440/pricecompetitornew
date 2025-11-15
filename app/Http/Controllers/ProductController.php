@@ -6,6 +6,7 @@ use App\Services\PhoneLCDPartsScraper;
 use Symfony\Component\DomCrawler\Crawler;
 use App\Models\Product;
 use App\Models\Competitor;
+use App\Models\Category;
 use App\Services\OdooService;
 use App\Repositories\ProductRepository;
 use Illuminate\Support\Facades\Http;
@@ -34,7 +35,11 @@ class ProductController extends Controller
     {
 
         $competitors = Competitor::getCompetitorNames();
-        $categories = Product::whereNotNull('category')
+        // Get categories from Category model
+        $categories = Category::active()->orderBy('name')->get();
+        // Also get legacy categories from products table for backward compatibility
+        $legacyCategories = Product::whereNotNull('category')
+            ->whereNull('category_id')
             ->distinct()
             ->orderBy('category')
             ->pluck('category')
@@ -49,7 +54,8 @@ class ProductController extends Controller
             'pageTitle' => 'Product',
             'pageDescription' => 'Product',
             'competitors' => $competitors,
-            'categories' => $categories
+            'categories' => $categories,
+            'legacyCategories' => $legacyCategories
         ]);
         
     }
@@ -143,109 +149,101 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'odoo_id' => 'nullable',
-            'competitor_id' => 'required|integer',
-            'competitor_url' => 'required|url',
-            'category' => 'required|string|max:255',
-            'name' => 'nullable|string|max:255',
-            'default_code' => 'nullable|string|max:255',
-            'list_price' => 'nullable|numeric|min:0',
-            'barcode' => 'nullable|string|max:255'
+            'odoo_id' => 'required|integer',
+            'competitor_urls' => 'nullable|array',
+            'competitor_urls.*.competitor_id' => 'required_with:competitor_urls.*.competitor_url|integer|exists:competitors,id',
+            'competitor_urls.*.competitor_url' => 'required_with:competitor_urls.*.competitor_id|url',
+            'category_id' => 'nullable|integer|exists:categories,id'
         ]);
 
         try {
-            $competitor = Competitor::find($validated['competitor_id']);
-            if (!$competitor) {
-                return response()->json(['success' => false, 'message' => 'Competitor not found'], 404);
+            $productData = [];
+
+            // Get category name from category_id if provided
+            if (!empty($validated['category_id'])) {
+                $category = Category::find($validated['category_id']);
+                if ($category) {
+                    $productData['category_id'] = $validated['category_id'];
+                    $productData['category'] = $category->name;
+                }
             }
 
-            if (!$this->validateDomainMatch($validated['competitor_url'], $competitor->website)) {
-                return response()->json(['success' => false, 'message' => "URL domain does not match competitor's website."], 400);
+            // Try to fetch product from Odoo by Odoo ID
+            $response = $this->odooService->fetchSpecificProduct($validated['odoo_id']);
+
+            // If not found, return error
+            if (!$response['success'] || empty($response['result'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Product not found in Odoo (Odoo ID: ' . $validated['odoo_id'] . ')'
+                ], 404);
             }
 
-            $productData = [
-                'category' => $validated['category']
-            ];
+            $odooProduct = $response['result'][0];
 
-            // If Odoo ID is provided, fetch from Odoo
-            if (!empty($validated['odoo_id'])) {
-                $response = $this->odooService->fetchSpecificProduct($validated['odoo_id']);
-                
-                if (!isset($response['result']) || empty($response['result'])) {
-                    return response()->json(['success' => false, 'message' => 'Product not found in Odoo'], 404);
-                }
+            // Use Odoo data for product information (form data is ignored except for category)
+            $productData = array_merge($productData, [
+                'odoo_id' => $odooProduct['id'],
+                'name' => $odooProduct['name'] ?? null,
+                'default_code' => $odooProduct['default_code'] ?? null,
+                'list_price' => $odooProduct['list_price'] ?? 0,
+                'barcode' => $odooProduct['barcode'] ?? null,
+            ]);
 
-                $odooProduct = $response['result'][0];
-                
-                $productData = array_merge($productData, [
-                    'odoo_id' => $odooProduct['id'],
-                    'name' => $odooProduct['name'] ?? null,
-                    'default_code' => $odooProduct['default_code'] ?? null,
-                    'list_price' => $odooProduct['list_price'] ?? 0,
-                    'barcode' => $odooProduct['barcode'] ?? null,
-                ]);
-
-                // Create or update product with category
-                $product = Product::updateOrCreate(
-                    ['odoo_id' => $odooProduct['id']],
-                    $productData
-                );
-            } else {
-                // Manual entry - validate required fields
-                if (empty($validated['name'])) {
-                    return response()->json(['success' => false, 'message' => 'Product name is required when Odoo ID is not provided'], 400);
-                }
-
-                // Generate manual product ID
-                $manualOdooId = $this->generateManualProductId();
-                
-                // Ensure we have a valid ID
-                if (empty($manualOdooId)) {
-                    Log::error('Failed to generate manual product ID, using fallback');
-                    $manualOdooId = '001'; // Fallback to 001 if generation fails
-                }
-
-                $productData = array_merge($productData, [
-                    'odoo_id' => $manualOdooId,
-                    'name' => $validated['name'],
-                    'default_code' => $validated['default_code'] ?? null,
-                    'list_price' => $validated['list_price'] ?? 0,
-                    'barcode' => $validated['barcode'] ?? null,
-                ]);
-
-                // Log the data being inserted for debugging
-                Log::info('Creating manual product', ['productData' => $productData]);
-
-                // Create product with manual Odoo ID
-                $product = Product::create($productData);
-            }
-
-            // Add competitor link and scrape price
-            $productCompetitorPrice = ProductCompetitorPrice::updateOrCreate(
-                [
-                    'product_id' => $product->id,
-                    'competitor_id' => $validated['competitor_id']
-                ],
-                ['competitor_url' => $validated['competitor_url']]
+            // Create or update product with Odoo data
+            $product = Product::updateOrCreate(
+                ['odoo_id' => $odooProduct['id']],
+                $productData
             );
 
-            $price = $this->scrapeCompetitorPrice($validated['competitor_url']);
-            if ($price) {
-                $productCompetitorPrice->update(['price' => $price]);
+            // Validate and add competitor URLs (if provided)
+            $scrapedPrices = [];
+            if (!empty($validated['competitor_urls']) && is_array($validated['competitor_urls'])) {
+                foreach ($validated['competitor_urls'] as $competitorUrlData) {
+                    $competitor = Competitor::find($competitorUrlData['competitor_id']);
+                    if (!$competitor) {
+                        Log::warning('Competitor not found', ['competitor_id' => $competitorUrlData['competitor_id']]);
+                        continue;
+                    }
+
+                    // Validate domain match
+                    if (!$this->validateDomainMatch($competitorUrlData['competitor_url'], $competitor->website)) {
+                        Log::warning('URL domain mismatch', [
+                            'competitor_id' => $competitorUrlData['competitor_id'],
+                            'url' => $competitorUrlData['competitor_url'],
+                            'expected_domain' => $competitor->website
+                        ]);
+                        continue;
+                    }
+
+                    // Add competitor link and scrape price
+                    $productCompetitorPrice = ProductCompetitorPrice::updateOrCreate(
+                        [
+                            'product_id' => $product->id,
+                            'competitor_id' => $competitorUrlData['competitor_id']
+                        ],
+                        ['competitor_url' => $competitorUrlData['competitor_url']]
+                    );
+
+                    $price = $this->scrapeCompetitorPrice($competitorUrlData['competitor_url']);
+                    if ($price) {
+                        $productCompetitorPrice->update(['price' => $price]);
+                        $scrapedPrices[$competitor->name] = $price;
+                    }
+                }
             }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Product added successfully',
+                'message' => 'Product added successfully from Odoo',
                 'product' => $product,
-                'price' => $price ?? null
+                'prices' => $scrapedPrices
             ]);
         } catch (\Exception $e) {
             Log::error('Store Product Error', [
                 'error' => $e->getMessage(),
-                'odoo_id' => $validated['odoo_id'] ?? null,
-                'competitor_id' => $validated['competitor_id'],
-                'url' => $validated['competitor_url']
+                'trace' => $e->getTraceAsString(),
+                'odoo_id' => $validated['odoo_id'] ?? null
             ]);
             return response()->json(['success' => false, 'message' => 'Internal server error: ' . $e->getMessage()], 500);
         }

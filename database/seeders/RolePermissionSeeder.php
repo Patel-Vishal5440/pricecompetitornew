@@ -47,6 +47,12 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'competitor.edit', 'description' => 'Edit competitors', 'group' => 'Competitor Management'],
             ['name' => 'competitor.delete', 'description' => 'Delete competitors', 'group' => 'Competitor Management'],
             
+            // Category Management
+            ['name' => 'category.view', 'description' => 'View categories', 'group' => 'Category Management'],
+            ['name' => 'category.create', 'description' => 'Create categories', 'group' => 'Category Management'],
+            ['name' => 'category.edit', 'description' => 'Edit categories', 'group' => 'Category Management'],
+            ['name' => 'category.delete', 'description' => 'Delete categories', 'group' => 'Category Management'],
+            
             // Price History
             ['name' => 'price_history.view', 'description' => 'View price history', 'group' => 'Price History'],
             ['name' => 'price_history.export', 'description' => 'Export price history', 'group' => 'Price History'],
@@ -82,6 +88,7 @@ class RolePermissionSeeder extends Seeder
                 'permissions' => [
                     'user.view', 'product.view', 'product.create', 'product.edit', 'product.sync',
                     'competitor.view', 'competitor.create', 'competitor.edit',
+                    'category.view', 'category.create', 'category.edit',
                     'price_history.view', 'price_history.export', 'dashboard.view', 'dashboard.analytics'
                 ]
             ],
@@ -89,7 +96,7 @@ class RolePermissionSeeder extends Seeder
                 'name' => 'analyst',
                 'description' => 'Analyst with read-only access to products and price history',
                 'permissions' => [
-                    'product.view', 'competitor.view', 'price_history.view', 'dashboard.view'
+                    'product.view', 'competitor.view', 'category.view', 'price_history.view', 'dashboard.view'
                 ]
             ],
             [

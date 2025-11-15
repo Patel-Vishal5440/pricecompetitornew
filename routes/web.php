@@ -8,6 +8,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\CronJobController;
+use App\Http\Controllers\CategoryController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Auth;
@@ -95,10 +96,18 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/store', [CompetitorController::class, 'store'])->name('competitor.store');
         Route::get('/edit/{id}', [CompetitorController::class, 'edit'])->name('competitor.edit');
         Route::put('/update/{id}', [CompetitorController::class, 'update'])->name('competitor.update');
-        Route::delete('/delete/{id}', [CompetitorController::class, 'delete'])->name('competitor.delete');
+        Route::delete('/delete/{id}', [CompetitorController::class, 'destroy'])->name('competitor.destroy');
         
         // Test route for debugging
         Route::get('/test-delete/{id}', [CompetitorController::class, 'testDelete'])->name('competitor.test-delete');
+    });
+
+    Route::group(['prefix' => 'categories'], function () {
+        Route::get('/', [CategoryController::class, 'index'])->name('categories.index');
+        Route::get('/list', [CategoryController::class, 'getCategories'])->name('categories.list');
+        Route::post('/', [CategoryController::class, 'store'])->name('categories.store');
+        Route::put('/{id}', [CategoryController::class, 'update'])->name('categories.update');
+        Route::delete('/{id}', [CategoryController::class, 'destroy'])->name('categories.destroy');
     });
 
     Route::group(['prefix' => 'price-history'], function () {

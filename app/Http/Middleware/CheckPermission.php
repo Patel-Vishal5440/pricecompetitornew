@@ -19,6 +19,11 @@ class CheckPermission
             return redirect()->route('login');
         }
 
+        // Allow admins to bypass permission checks
+        if (auth()->user()->isAdmin()) {
+            return $next($request);
+        }
+
         if (!auth()->user()->hasPermission($permission)) {
             abort(403, 'Unauthorized action.');
         }

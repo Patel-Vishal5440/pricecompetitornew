@@ -67,7 +67,7 @@ class CompetitorRepository
             $deleteButton = '';
             if ($competitor->id !== auth()->id()) {
                 $deleteButton = '<span class="text-light">|</span>
-                        <form action="' . route('competitor.delete', $competitor) . '" method="POST" style="display:inline" class="delete-form">
+                        <form action="' . route('competitor.destroy', $competitor) . '" method="POST" style="display:inline" class="delete-form">
                             ' . csrf_field() . '
                             ' . method_field('DELETE') . '
                             <button type="submit" class="btn btn-link text-danger p-0 m-0 align-baseline mx-2" style="font-size:inherit;" title="Delete">

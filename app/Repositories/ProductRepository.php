@@ -14,6 +14,7 @@ class ProductRepository
         $category = $request->get('category', null);
         $competitorId = $request->get('competitor_id', null);
         $priceSort = $request->get('price_sort', null); // 'low_to_high' or 'high_to_low'
+        $priceComparison = $request->get('price_comparison', null); // 'higher' or 'lower'
 
         $product = Product::query()
             ->when($searchData, function (Builder $query, $searchData) {
@@ -23,7 +24,12 @@ class ProductRepository
                 });
             })
             ->when($category, function (Builder $query, $category) {
-                return $query->where('category', $category);
+                // Check if category is numeric (category_id) or string (legacy category name)
+                if (is_numeric($category)) {
+                    return $query->where('category_id', $category);
+                } else {
+                    return $query->where('category', $category);
+                }
             })
             ->when($competitorId, function (Builder $query, $competitorId) {
                 return $query->whereHas('competitorPrices', function ($q) use ($competitorId) {
@@ -31,16 +37,50 @@ class ProductRepository
                 });
             });
 
-        // Handle price sorting by competitor price
-        if ($priceSort && $competitorId) {
+        // Determine if we need to join the competitor prices table
+        $needsJoin = ($priceComparison && $competitorId) || ($priceSort && $competitorId);
+        
+        // Handle price comparison filter (higher/lower than product's own price)
+        if ($priceComparison && $competitorId) {
             $product->leftJoin('product_competitor_prices', function($join) use ($competitorId) {
                 $join->on('products.id', '=', 'product_competitor_prices.product_id')
-                     ->where('product_competitor_prices.competitor_id', '=', $competitorId);
+                     ->where('product_competitor_prices.competitor_id', '=', $competitorId)
+                     ->whereNotNull('product_competitor_prices.price');
             })
-            ->select('products.*', 'product_competitor_prices.price as competitor_price')
-            ->distinct()
-            ->orderBy('product_competitor_prices.price', $priceSort === 'high_to_low' ? 'desc' : 'asc');
+            ->whereNotNull('products.list_price')
+            ->whereNotNull('product_competitor_prices.price');
+            
+            if ($priceComparison === 'higher') {
+                // Competitor price is higher than product's own price
+                $product->whereColumn('product_competitor_prices.price', '>', 'products.list_price');
+            } elseif ($priceComparison === 'lower') {
+                // Competitor price is lower than product's own price
+                $product->whereColumn('product_competitor_prices.price', '<', 'products.list_price');
+            }
+        }
+
+        // Handle price sorting by competitor price
+        if ($priceSort && $competitorId) {
+            // If not already joined for price comparison, join now
+            if (!$priceComparison) {
+                $product->leftJoin('product_competitor_prices', function($join) use ($competitorId) {
+                    $join->on('products.id', '=', 'product_competitor_prices.product_id')
+                         ->where('product_competitor_prices.competitor_id', '=', $competitorId);
+                });
+            }
+        }
+
+        // Apply select and distinct if we did a join (must be before orderBy)
+        if ($needsJoin) {
+            $product->select('products.*', 'product_competitor_prices.price as competitor_price')
+                    ->distinct();
+        }
+
+        // Handle price sorting by competitor price (after select)
+        if ($priceSort && $competitorId) {
+            $product->orderBy('product_competitor_prices.price', $priceSort === 'high_to_low' ? 'desc' : 'asc');
         } else {
+            // Default ordering if no price sort is applied
             $product->latest('id');
         }
 

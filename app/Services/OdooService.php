@@ -154,6 +154,11 @@ class OdooService
     public function fetchSpecificProduct($odooId)
     {
         try {
+            if (!$this->user_id) {
+                $result = $this->authenticate();
+                $this->user_id = $result;
+            }
+            
             $response = Http::post($this->url, [
                 "jsonrpc" => "2.0",
                 "id" => 10,
@@ -177,7 +182,7 @@ class OdooService
             ]);
 
             $result = $response->json();
-dd($result);
+
 
             if (isset($result['error'])) {
                 return [
@@ -188,7 +193,6 @@ dd($result);
             }
 
             if (empty($result['result'])) {
-
                 return [
                     'success' => false,
                     'message' => 'Product not found in Odoo',
@@ -196,15 +200,79 @@ dd($result);
                 ];
             }
 
-            $result['success'] = true;
-            $result['message'] = 'Product not found in Odoo';
-
-            return  $result;
+            return [
+                'success' => true,
+                'message' => 'Product fetched successfully from Odoo',
+                'result' => $result['result']
+            ];
 
         } catch (\Exception $e) {
             return [
                 'success' => false,
                 'message' => 'Failed to fetch product from Odoo',
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    public function fetchProductBySku($sku)
+    {
+        try {
+            if (!$this->user_id) {
+                $result = $this->authenticate();
+                $this->user_id = $result;
+            }
+            
+            $response = Http::post($this->url, [
+                "jsonrpc" => "2.0",
+                "id" => 11,
+                "method" => "call",
+                "params" => [
+                    "service" => "object",
+                    "method" => "execute_kw",
+                    "args" => [
+                        $this->db,
+                        $this->user_id,
+                        $this->api_key,
+                        "product.product",
+                        "search_read",
+                        [[['default_code', '=', $sku]]],
+                        [
+                            "fields" => ["id", "name", "default_code", "list_price", "qty_available", "barcode"],
+                            "limit" => 1
+                        ]
+                    ]
+                ]
+            ]);
+
+            $result = $response->json();
+
+            if (isset($result['error'])) {
+                return [
+                    'success' => false,
+                    'message' => $result['error']['data']['message'] ?? 'Error fetching product from Odoo by SKU',
+                    'error' => $result['error']
+                ];
+            }
+
+            if (empty($result['result'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Product not found in Odoo by SKU',
+                    'data' => null
+                ];
+            }
+
+            return [
+                'success' => true,
+                'message' => 'Product fetched successfully from Odoo by SKU',
+                'result' => $result['result']
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Failed to fetch product from Odoo by SKU',
                 'error' => $e->getMessage()
             ];
         }

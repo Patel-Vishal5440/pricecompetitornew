@@ -28,10 +28,19 @@
                 auth()->user()->hasPermission('user.view') ||
                 auth()->user()->hasPermission('role.view') ||
                 auth()->user()->hasPermission('permission.view') ||
+                auth()->user()->hasPermission('category.view') ||
                 auth()->user()->hasPermission('cron.view')
             )
                 <li class="menu-title mt-3">
                     <span>Management</span>
+                </li>
+            @endif
+            @if(auth()->user()->isAdmin() || auth()->user()->hasPermission('category.view'))
+                <li>
+                    <a href="{{ route('categories.index') }}" class="{{ request()->is('categories*') ? 'active' : '' }}">
+                        <span data-feather="tag" class="nav-icon"></span>
+                        <span class="menu-text">Categories</span>
+                    </a>
                 </li>
             @endif
             @if(auth()->user()->isAdmin() || auth()->user()->hasPermission('user.view'))

@@ -204,7 +204,7 @@
                         <!-- Filter and Action Bar -->
                         <div class="row g-3 align-items-end mb-3">
                             <!-- Search Column -->
-                            <div class="col-12 col-md-3 col-lg-3">
+                            <div class="col-12 col-md-2 col-lg-2">
                                 <label class="form-label small text-muted mb-1">Search Product</label>
                                 <div class="input-container icon-left icon-right position-relative">
                                     <span class="input-icon icon-left">
@@ -226,7 +226,10 @@
                                 <select id="filterCategory" class="form-control form-control-solid">
                                     <option value="">All Categories</option>
                                     @foreach($categories as $category)
-                                        <option value="{{ $category }}">{{ $category }}</option>
+                                        <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                    @endforeach
+                                    @foreach($legacyCategories as $legacyCategory)
+                                        <option value="{{ $legacyCategory }}">{{ $legacyCategory }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -252,8 +255,18 @@
                                 </select>
                             </div>
                             
+                            <!-- Price Comparison Filter -->
+                            <div class="col-12 col-md-2 col-lg-2">
+                                <label class="form-label small text-muted mb-1">Price Comparison</label>
+                                <select id="filterPriceComparison" class="form-control form-control-solid" title="Select a competitor first to compare prices">
+                                    <option value="">All Prices</option>
+                                    <option value="higher">Competitor Higher</option>
+                                    <option value="lower">Competitor Lower</option>
+                                </select>
+                            </div>
+                            
                             <!-- Add Product Button -->
-                            <div class="col-12 col-md-3 col-lg-3 d-flex align-items-end justify-content-end">
+                            <div class="col-12 col-md-2 col-lg-2 d-flex align-items-end justify-content-end">
                                 <button type="button" class="btn btn-primary btn-sm" id="addProductBtn">
                                     <i class="fas fa-plus me-1"></i> Add Product
                                 </button>
@@ -327,12 +340,12 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
-                <!-- Manual Entry Info -->
+                <!-- Odoo Product Entry Info -->
                 <div class="alert alert-info d-flex align-items-start mb-4" role="alert">
                     <i class="fas fa-info-circle me-3 mt-1"></i>
                     <div>
-                        <strong class="d-block mb-1">Manual Product Entry</strong>
-                        <small class="text-muted">Odoo ID will be auto-generated sequentially (001, 002, 003, etc.)</small>
+                        <strong class="d-block mb-1">Odoo Product Entry</strong>
+                        <small class="text-muted">Product data will be fetched from Odoo using the Odoo ID.</small>
                     </div>
                 </div>
                 
@@ -343,33 +356,14 @@
                     </h6>
                     
                     <div class="mb-3">
-                        <label for="addProductName" class="form-label fw-semibold">
-                            Product Name <span class="text-danger">*</span>
+                        <label for="addProductOdooId" class="form-label fw-semibold">
+                            Odoo ID <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="addProductName" placeholder="Enter product name">
-                        <div id="addProductNameError" class="invalid-feedback" style="display:none;"></div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="addProductSku" class="form-label fw-semibold">SKU / Default Code</label>
-                            <input type="text" class="form-control" id="addProductSku" placeholder="Enter SKU">
-                            <div id="addProductSkuError" class="invalid-feedback" style="display:none;"></div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="addProductPrice" class="form-label fw-semibold">Price</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
-                                <input type="number" step="0.01" min="0" class="form-control" id="addProductPrice" placeholder="0.00">
-                            </div>
-                            <div id="addProductPriceError" class="invalid-feedback" style="display:none;"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="addProductBarcode" class="form-label fw-semibold">Barcode</label>
-                        <input type="text" class="form-control" id="addProductBarcode" placeholder="Enter barcode">
-                        <div id="addProductBarcodeError" class="invalid-feedback" style="display:none;"></div>
+                        <input type="number" class="form-control" id="addProductOdooId" placeholder="Enter Odoo Product ID" required>
+                        <div id="addProductOdooIdError" class="invalid-feedback" style="display:none;"></div>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle me-1"></i>Product data will be automatically fetched from Odoo
+                        </small>
                     </div>
                 </div>
 
@@ -383,44 +377,46 @@
                     
                     <div class="mb-3">
                         <label for="addProductCategory" class="form-label fw-semibold">
-                            Category <span class="text-danger">*</span>
+                            Category
                         </label>
-                        <input type="text" class="form-control" id="addProductCategory" placeholder="Enter or select category" list="categoryList">
-                        <datalist id="categoryList">
+                        <select class="form-select" id="addProductCategory">
+                            <option value="">Select Category (Optional)</option>
                             @foreach($categories as $category)
-                                <option value="{{ $category }}">
+                                <option value="{{ $category->id }}">{{ $category->name }}</option>
                             @endforeach
-                        </datalist>
+                        </select>
                         <div id="addProductCategoryError" class="invalid-feedback" style="display:none;"></div>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle me-1"></i>Can't find your category? Contact administrator to add a new category.
+                        </small>
                     </div>
                     
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="addProductCompetitor" class="form-label fw-semibold">
-                                Competitor <span class="text-danger">*</span>
-                            </label>
-                            <select class="form-select" id="addProductCompetitor" required>
-                                <option value="">Select Competitor</option>
-                                @foreach($competitors as $competitor)
-                                    <option value="{{ $competitor->id }}" data-website="{{ $competitor->website }}">{{ $competitor->name }}</option>
-                                @endforeach
-                            </select>
-                            <div id="addProductCompetitorError" class="invalid-feedback" style="display:none;"></div>
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label for="addProductCompetitorUrl" class="form-label fw-semibold">
-                                Competitor URL <span class="text-danger">*</span>
-                            </label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-link"></i></span>
-                                <input type="url" class="form-control" id="addProductCompetitorUrl" placeholder="Paste competitor product link" required>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Competitor URLs
+                        </label>
+                        <small class="form-text text-muted d-block mb-2">
+                            <i class="fas fa-info-circle me-1"></i>Add competitor URLs (optional). Price will be automatically scraped from these URLs.
+                        </small>
+                        <div id="competitorUrlsContainer">
+                            @foreach($competitors as $competitor)
+                            <div class="mb-2 competitor-url-row" data-competitor-id="{{ $competitor->id }}" data-competitor-website="{{ $competitor->website }}">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text" title="{{ $competitor->name }}">
+                                        <i class="fas fa-link"></i>
+                                        <span class="ms-1">{{ $competitor->shortname ?? substr($competitor->name, 0, 3) }}</span>
+                                    </span>
+                                    <input type="url" 
+                                           class="form-control competitor-url-input" 
+                                           id="competitorUrl_{{ $competitor->id }}" 
+                                           data-competitor-id="{{ $competitor->id }}"
+                                           placeholder="Paste {{ $competitor->shortname ?? $competitor->name }} link">
+                                </div>
+                                <div class="invalid-feedback competitor-url-error" id="competitorUrlError_{{ $competitor->id }}" style="display:none;"></div>
                             </div>
-                            <div id="addProductCompetitorUrlError" class="invalid-feedback" style="display:none;"></div>
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle me-1"></i>Price will be automatically scraped from this URL
-                            </small>
+                            @endforeach
                         </div>
+                        <div id="competitorUrlsError" class="invalid-feedback" style="display:none;"></div>
                     </div>
                 </div>
             </div>
@@ -501,6 +497,7 @@ $(document).ready(function() {
                 data.category = $('#filterCategory').val();
                 data.competitor_id = $('#filterCompetitor').val();
                 data.price_sort = $('#filterPriceSort').val();
+                data.price_comparison = $('#filterPriceComparison').val();
             },
             complete: function() {
                 $('[data-bs-toggle="tooltip"]').tooltip('dispose');
@@ -575,9 +572,10 @@ $(document).ready(function() {
     });
 
     $('#filterCompetitor').on('change', function() {
-        // Clear price sort if competitor is cleared
+        // Clear price sort and price comparison if competitor is cleared
         if (!$(this).val()) {
             $('#filterPriceSort').val('');
+            $('#filterPriceComparison').val('');
         }
         table.ajax.reload();
     });
@@ -586,6 +584,16 @@ $(document).ready(function() {
         var competitorId = $('#filterCompetitor').val();
         if ($(this).val() && !competitorId) {
             toastr.warning('Please select a competitor first to sort by price');
+            $(this).val('');
+            return;
+        }
+        table.ajax.reload();
+    });
+
+    $('#filterPriceComparison').on('change', function() {
+        var competitorId = $('#filterCompetitor').val();
+        if ($(this).val() && !competitorId) {
+            toastr.warning('Please select a competitor first to compare prices');
             $(this).val('');
             return;
         }
@@ -601,16 +609,12 @@ $(document).ready(function() {
     // Add Product Modal
     $(document).on('click', '#addProductBtn', function() {
         // Reset form fields
-        $('#addProductName').val('');
-        $('#addProductSku').val('');
-        $('#addProductPrice').val('');
-        $('#addProductBarcode').val('');
+        $('#addProductOdooId').val('');
         $('#addProductCategory').val('');
-        $('#addProductCompetitor').val('');
-        $('#addProductCompetitorUrl').val('');
+        $('.competitor-url-input').val('');
         // Reset errors
-        $('#addProductNameError, #addProductSkuError, #addProductPriceError, #addProductBarcodeError, #addProductCategoryError, #addProductCompetitorError, #addProductCompetitorUrlError').hide();
-        $('#addProductName, #addProductSku, #addProductPrice, #addProductBarcode, #addProductCategory, #addProductCompetitor, #addProductCompetitorUrl').removeClass('is-invalid');
+        $('.invalid-feedback').hide();
+        $('.is-invalid').removeClass('is-invalid');
         $('#addProductModal').modal('show');
         if (typeof feather !== 'undefined') {
             feather.replace();
@@ -625,64 +629,82 @@ $(document).ready(function() {
         $('.invalid-feedback').hide();
     });
 
+    // Clear Odoo ID error when user starts typing
+    $(document).on('input', '#addProductOdooId', function() {
+        $('#addProductOdooIdError').hide();
+        $(this).removeClass('is-invalid');
+    });
+
     $(document).on('click', '#saveAddProduct', function() {
         var $btn = $(this);
-        var productName = $('#addProductName').val();
-        var productSku = $('#addProductSku').val();
-        var productPrice = $('#addProductPrice').val();
-        var productBarcode = $('#addProductBarcode').val();
-        var category = $('#addProductCategory').val();
-        var competitorId = $('#addProductCompetitor').val();
-        var competitorUrl = $('#addProductCompetitorUrl').val();
-        var competitorWebsite = $('#addProductCompetitor option:selected').data('website');
+        var odooId = $('#addProductOdooId').val();
+        var categoryId = $('#addProductCategory').val();
 
         // Reset errors
-        $('#addProductNameError, #addProductSkuError, #addProductPriceError, #addProductBarcodeError, #addProductCategoryError, #addProductCompetitorError, #addProductCompetitorUrlError').hide();
-        $('#addProductName, #addProductSku, #addProductPrice, #addProductBarcode, #addProductCategory, #addProductCompetitor, #addProductCompetitorUrl').removeClass('is-invalid');
+        $('.invalid-feedback').hide();
+        $('.is-invalid').removeClass('is-invalid');
 
         var hasError = false;
 
-        // Validate manual entry fields
-        if (!productName || productName.trim() === '') {
-            $('#addProductNameError').text('Product name is required').show();
-            $('#addProductName').addClass('is-invalid');
+        // Validate Odoo ID (required)
+        if (!odooId || odooId.trim() === '' || isNaN(odooId)) {
+            $('#addProductOdooIdError').text('Odoo ID is required and must be a number').show();
+            $('#addProductOdooId').addClass('is-invalid');
             hasError = true;
         }
 
-        if (!category || category.trim() === '') {
-            $('#addProductCategoryError').text('Category is required').show();
-            $('#addProductCategory').addClass('is-invalid');
-            hasError = true;
-        }
+        // Collect and validate competitor URLs (optional)
+        var competitorUrls = [];
+        
+        $('.competitor-url-input').each(function() {
+            var $input = $(this);
+            var url = $input.val().trim();
+            var competitorId = $input.data('competitor-id');
+            var $row = $input.closest('.competitor-url-row');
+            var competitorWebsite = $row.data('competitor-website');
+            var $errorDiv = $('#competitorUrlError_' + competitorId);
 
-        if (!competitorId) {
-            $('#addProductCompetitorError').text('Competitor is required').show();
-            $('#addProductCompetitor').addClass('is-invalid');
-            hasError = true;
-        }
+            // Clear previous errors
+            $errorDiv.hide();
+            $input.removeClass('is-invalid');
 
-        if (!competitorUrl || competitorUrl.trim() === '') {
-            $('#addProductCompetitorUrlError').text('Competitor URL is required').show();
-            $('#addProductCompetitorUrl').addClass('is-invalid');
-            hasError = true;
-        }
-
-        // Validate URL domain if competitor website is set
-        if (competitorUrl && competitorWebsite) {
-            try {
-                const providedDomain = new URL(competitorUrl).hostname.replace(/^www\./, '').toLowerCase();
-                const competitorDomain = new URL(competitorWebsite).hostname.replace(/^www\./, '').toLowerCase();
-                if (providedDomain !== competitorDomain) {
-                    $('#addProductCompetitorUrlError').text(`URL domain does not match competitor's website. Expected: ${competitorDomain}`).show();
-                    $('#addProductCompetitorUrl').addClass('is-invalid');
+            // If URL is provided, validate it
+            if (url) {
+                // Validate URL format
+                try {
+                    new URL(url);
+                } catch (e) {
+                    $errorDiv.text('Invalid URL format').show();
+                    $input.addClass('is-invalid');
                     hasError = true;
+                    return;
                 }
-            } catch (e) {
-                $('#addProductCompetitorUrlError').text('Invalid URL format').show();
-                $('#addProductCompetitorUrl').addClass('is-invalid');
-                hasError = true;
+
+                // Validate URL domain if competitor website is set
+                if (competitorWebsite) {
+                    try {
+                        const providedDomain = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+                        const competitorDomain = new URL(competitorWebsite).hostname.replace(/^www\./, '').toLowerCase();
+                        if (providedDomain !== competitorDomain) {
+                            $errorDiv.text(`URL domain does not match competitor's website. Expected: ${competitorDomain}`).show();
+                            $input.addClass('is-invalid');
+                            hasError = true;
+                            return;
+                        }
+                    } catch (e) {
+                        $errorDiv.text('Invalid URL format').show();
+                        $input.addClass('is-invalid');
+                        hasError = true;
+                        return;
+                    }
+                }
+
+                competitorUrls.push({
+                    competitor_id: competitorId,
+                    competitor_url: url
+                });
             }
-        }
+        });
 
         if (hasError) {
             return;
@@ -693,21 +715,15 @@ $(document).ready(function() {
 
         var postData = {
             _token: "{{ csrf_token() }}",
-            category: category,
-            competitor_id: competitorId,
-            competitor_url: competitorUrl
+            odoo_id: odooId
         };
 
-        // Add manual fields (Odoo ID will be auto-generated on backend)
-        postData.name = productName;
-        if (productSku && productSku.trim() !== '') {
-            postData.default_code = productSku;
+        // Add optional fields only if provided
+        if (categoryId) {
+            postData.category_id = categoryId;
         }
-        if (productPrice && productPrice.trim() !== '') {
-            postData.list_price = productPrice;
-        }
-        if (productBarcode && productBarcode.trim() !== '') {
-            postData.barcode = productBarcode;
+        if (competitorUrls.length > 0) {
+            postData.competitor_urls = competitorUrls;
         }
 
         $.post("{{ route('products.store') }}", postData).done(function(response) {
@@ -715,7 +731,6 @@ $(document).ready(function() {
             $btn.prop('disabled', false).text('Add Product');
             if (response.success) {
                 var message = response.message;
-                // Show generated Odoo ID
                 if (response.product && response.product.odoo_id) {
                     message += ' (Odoo ID: ' + response.product.odoo_id + ')';
                 }
@@ -723,17 +738,30 @@ $(document).ready(function() {
                 $('#addProductModal').modal('hide');
                 // Reset form
                 $('#addProductModal form')[0]?.reset();
+                $('.competitor-url-input').val('');
                 table.ajax.reload();
             } else {
                 toastr.error(response.message);
+                // Show error inline next to Odoo ID field if it's about Odoo ID
+                if (response.message && (response.message.toLowerCase().includes('not found') || response.message.toLowerCase().includes('odoo'))) {
+                    $('#addProductOdooIdError').text(response.message).show();
+                    $('#addProductOdooId').addClass('is-invalid');
+                }
             }
         }).fail(function(xhr) {
             hidePageLoading();
             $btn.prop('disabled', false).text('Add Product');
+            var errorMessage = 'Failed to add product';
             if (xhr.responseJSON && xhr.responseJSON.message) {
-                toastr.error(xhr.responseJSON.message);
+                errorMessage = xhr.responseJSON.message;
+                toastr.error(errorMessage);
+                // Show error inline next to Odoo ID field if it's about Odoo ID
+                if (errorMessage.toLowerCase().includes('not found') || errorMessage.toLowerCase().includes('odoo')) {
+                    $('#addProductOdooIdError').text(errorMessage).show();
+                    $('#addProductOdooId').addClass('is-invalid');
+                }
             } else {
-                toastr.error('Failed to add product');
+                toastr.error(errorMessage);
             }
         });
     });

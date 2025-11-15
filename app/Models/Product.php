@@ -17,12 +17,18 @@ class Product extends Model
         'extra_data',
         'barcode',
         'status',
-        'category'
+        'category',
+        'category_id'
     ];
 
     protected $casts = [
         'extra_data' => 'array',
     ];
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
 
     public function competitors()
     {

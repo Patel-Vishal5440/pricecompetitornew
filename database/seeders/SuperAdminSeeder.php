@@ -58,6 +58,12 @@ class SuperAdminSeeder extends Seeder
             ['name' => 'competitor.monitor', 'description' => 'Monitor competitors', 'group' => 'Competitor Management'],
             ['name' => 'competitor.export', 'description' => 'Export competitor data', 'group' => 'Competitor Management'],
             
+            // Category Management
+            ['name' => 'category.view', 'description' => 'View categories', 'group' => 'Category Management'],
+            ['name' => 'category.create', 'description' => 'Create categories', 'group' => 'Category Management'],
+            ['name' => 'category.edit', 'description' => 'Edit categories', 'group' => 'Category Management'],
+            ['name' => 'category.delete', 'description' => 'Delete categories', 'group' => 'Category Management'],
+            
             // Price History
             ['name' => 'price_history.view', 'description' => 'View price history', 'group' => 'Price History'],
             ['name' => 'price_history.export', 'description' => 'Export price history', 'group' => 'Price History'],

@@ -49,32 +49,39 @@ class CompetitorController extends Controller
      * Store a newly created competitor resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
-        $request['status'] = 1;
-        $validators = Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'website' => 'required|url|max:255',
             'shortname' => 'required|string|max:100',
             'price_class_name' => 'nullable|string|max:255',
-            'status' => 'required|in:1,0'
+            'status' => 'nullable|in:active,inactive'
         ]);
 
-
-        if ($validators->fails()) {
-            return redirect()->route('competitor.create')->withErrors($validators)->withInput();
-        } else {
-            $competitor = new Competitor();
-            $competitor->name = $request->name;
-            $competitor->website = $request->website;
-            $competitor->shortname = $request->shortname;
-            $competitor->price_class_name = $request->price_class_name;
-            $competitor->status = $request->status;
-            $competitor->save();
-            return redirect()->route('competitor.list')->with('create', 'Competitor created successfully');
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
         }
+
+        $competitor = Competitor::create([
+            'name' => $request->name,
+            'website' => $request->website,
+            'shortname' => $request->shortname,
+            'price_class_name' => $request->price_class_name,
+            'status' => $request->status ?? 'active'
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Competitor created successfully',
+            'competitor' => $competitor
+        ]);
     }
 
     /**
@@ -96,30 +103,41 @@ class CompetitorController extends Controller
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, $id)
     {
-        $request['status'] = 1;
-        $validators = Validator::make($request->all(), [
+        $competitor = Competitor::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'website' => 'required|url|max:255',
             'shortname' => 'required|string|max:100',
-            'status' => 'required|in:1,0'
+            'price_class_name' => 'nullable|string|max:255',
+            'status' => 'nullable|in:active,inactive'
         ]);
 
-        if ($validators->fails()) {
-            return redirect()->route('competitor.edit', $id)->withErrors($validators)->withInput();
-        } else {
-            $competitor = Competitor::findOrFail($id);
-            $competitor->name = $request->name;
-            $competitor->website = $request->website;
-            $competitor->shortname = $request->shortname;
-            $competitor->price_class_name = $request->price_class_name;
-            $competitor->status = $request->status;
-            $competitor->save();
-            return redirect()->route('competitor.list')->with('update', 'Competitor updated successfully');
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
         }
+
+        $competitor->update([
+            'name' => $request->name,
+            'website' => $request->website,
+            'shortname' => $request->shortname,
+            'price_class_name' => $request->price_class_name,
+            'status' => $request->status ?? $competitor->status
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Competitor updated successfully',
+            'competitor' => $competitor
+        ]);
     }
 
     /**
@@ -132,8 +150,6 @@ class CompetitorController extends Controller
     {
         try {
             $competitor = Competitor::findOrFail($id);
-            
-            // Delete the competitor
             $competitor->delete();
             
             // If AJAX request, return JSON response
