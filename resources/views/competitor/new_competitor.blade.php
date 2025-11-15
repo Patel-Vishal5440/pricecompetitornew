@@ -101,8 +101,10 @@
                 validatePriceClassName();
             });
 
-            // Form submission validation
+            // Form submission with AJAX
             form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
                 let isValid = true;
 
                 if (!validateName()) isValid = false;
@@ -111,8 +113,107 @@
                 if (!validatePriceClassName()) isValid = false;
 
                 if (!isValid) {
-                    e.preventDefault();
+                    return;
                 }
+
+                // Clear all previous errors
+                document.querySelectorAll('.text-danger[id$="-error"]').forEach(el => {
+                    el.textContent = '';
+                });
+                document.querySelectorAll('.is-invalid').forEach(el => {
+                    el.classList.remove('is-invalid');
+                });
+
+                // Get form data
+                const formData = new FormData(form);
+                const submitButton = form.querySelector('button[type="submit"]');
+                const originalButtonText = submitButton.textContent;
+                
+                // Disable submit button
+                submitButton.disabled = true;
+                submitButton.textContent = isEditMode ? 'Updating...' : 'Saving...';
+
+                // Determine URL
+                const url = form.getAttribute('action');
+                
+                // Get CSRF token
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                                 document.querySelector('input[name="_token"]')?.value;
+
+                // Submit via AJAX using fetch
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                })
+                .then(response => {
+                    // Check if response is ok
+                    if (!response.ok) {
+                        return response.json().then(err => Promise.reject(err));
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalButtonText;
+
+                    if (data.success) {
+                        // Redirect to list page immediately
+                        window.location.href = '/competitor/list';
+                    } else {
+                        // Handle validation errors
+                        if (data.errors) {
+                            Object.keys(data.errors).forEach(field => {
+                                const errorElement = document.getElementById(field + '-error');
+                                const inputElement = document.getElementById(field);
+                                if (errorElement && inputElement) {
+                                    errorElement.textContent = Array.isArray(data.errors[field]) 
+                                        ? data.errors[field][0] 
+                                        : data.errors[field];
+                                    inputElement.classList.add('is-invalid');
+                                }
+                            });
+                        }
+                        
+                        // Show error message
+                        if (typeof toastr !== 'undefined') {
+                            toastr.error(data.message || 'Validation failed');
+                        } else {
+                            alert(data.message || 'Validation failed');
+                        }
+                    }
+                })
+                .catch(error => {
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalButtonText;
+                    
+                    console.error('Error:', error);
+                    
+                    // Handle validation errors from catch
+                    if (error.errors) {
+                        Object.keys(error.errors).forEach(field => {
+                            const errorElement = document.getElementById(field + '-error');
+                            const inputElement = document.getElementById(field);
+                            if (errorElement && inputElement) {
+                                errorElement.textContent = Array.isArray(error.errors[field]) 
+                                    ? error.errors[field][0] 
+                                    : error.errors[field];
+                                inputElement.classList.add('is-invalid');
+                            }
+                        });
+                    }
+                    
+                    const errorMessage = error.message || 'An error occurred. Please try again.';
+                    if (typeof toastr !== 'undefined') {
+                        toastr.error(errorMessage);
+                    } else {
+                        alert(errorMessage);
+                    }
+                });
             });
 
             function validateName() {

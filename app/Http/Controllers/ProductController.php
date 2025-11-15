@@ -149,7 +149,8 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'odoo_id' => 'required|integer',
+            'odoo_id' => 'nullable|integer|required_without:sku',
+            'sku' => 'nullable|string|required_without:odoo_id',
             'competitor_urls' => 'nullable|array',
             'competitor_urls.*.competitor_id' => 'required_with:competitor_urls.*.competitor_url|integer|exists:competitors,id',
             'competitor_urls.*.competitor_url' => 'required_with:competitor_urls.*.competitor_id|url',
@@ -168,14 +169,27 @@ class ProductController extends Controller
                 }
             }
 
-            // Try to fetch product from Odoo by Odoo ID
-            $response = $this->odooService->fetchSpecificProduct($validated['odoo_id']);
+            // Fetch product from Odoo by either Odoo ID or SKU
+            if (!empty($validated['odoo_id'])) {
+                // Fetch by Odoo ID
+                $response = $this->odooService->fetchSpecificProduct($validated['odoo_id']);
+                $errorMessage = 'Product not found in Odoo (Odoo ID: ' . $validated['odoo_id'] . ')';
+            } elseif (!empty($validated['sku'])) {
+                // Fetch by SKU
+                $response = $this->odooService->fetchProductBySku($validated['sku']);
+                $errorMessage = 'Product not found in Odoo (SKU: ' . $validated['sku'] . ')';
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Either odoo_id or sku must be provided'
+                ], 400);
+            }
 
             // If not found, return error
             if (!$response['success'] || empty($response['result'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Product not found in Odoo (Odoo ID: ' . $validated['odoo_id'] . ')'
+                    'message' => $errorMessage
                 ], 404);
             }
 

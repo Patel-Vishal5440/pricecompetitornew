@@ -345,7 +345,7 @@
                     <i class="fas fa-info-circle me-3 mt-1"></i>
                     <div>
                         <strong class="d-block mb-1">Odoo Product Entry</strong>
-                        <small class="text-muted">Product data will be fetched from Odoo using the Odoo ID.</small>
+                        <small class="text-muted">Product data will be fetched from Odoo using either Odoo ID or SKU. At least one is required.</small>
                     </div>
                 </div>
                 
@@ -357,13 +357,29 @@
                     
                     <div class="mb-3">
                         <label for="addProductOdooId" class="form-label fw-semibold">
-                            Odoo ID <span class="text-danger">*</span>
+                            Odoo ID
                         </label>
-                        <input type="number" class="form-control" id="addProductOdooId" placeholder="Enter Odoo Product ID" required>
+                        <input type="number" class="form-control" id="addProductOdooId" placeholder="Enter Odoo Product ID (Optional)">
                         <div id="addProductOdooIdError" class="invalid-feedback" style="display:none;"></div>
                         <small class="form-text text-muted">
-                            <i class="fas fa-info-circle me-1"></i>Product data will be automatically fetched from Odoo
+                            <i class="fas fa-info-circle me-1"></i>Enter Odoo Product ID to fetch product data
                         </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="addProductSku" class="form-label fw-semibold">
+                            SKU
+                        </label>
+                        <input type="text" class="form-control" id="addProductSku" placeholder="Enter Product SKU (Optional)">
+                        <div id="addProductSkuError" class="invalid-feedback" style="display:none;"></div>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle me-1"></i>Enter Product SKU to fetch product data (Alternative to Odoo ID)
+                        </small>
+                    </div>
+                    
+                    <div class="alert alert-warning d-flex align-items-start" role="alert" style="margin-top: 1rem;">
+                        <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+                        <small class="text-muted">Please provide either Odoo ID or SKU to fetch product from Odoo.</small>
                     </div>
                 </div>
 
@@ -610,6 +626,7 @@ $(document).ready(function() {
     $(document).on('click', '#addProductBtn', function() {
         // Reset form fields
         $('#addProductOdooId').val('');
+        $('#addProductSku').val('');
         $('#addProductCategory').val('');
         $('.competitor-url-input').val('');
         // Reset errors
@@ -625,6 +642,8 @@ $(document).ready(function() {
     $(document).on('show.bs.modal', '#addProductModal', function() {
         // Reset form
         $('#addProductModal form')[0]?.reset();
+        $('#addProductOdooId').val('');
+        $('#addProductSku').val('');
         $('.is-invalid').removeClass('is-invalid');
         $('.invalid-feedback').hide();
     });
@@ -635,9 +654,16 @@ $(document).ready(function() {
         $(this).removeClass('is-invalid');
     });
 
+    // Clear SKU error when user starts typing
+    $(document).on('input', '#addProductSku', function() {
+        $('#addProductSkuError').hide();
+        $(this).removeClass('is-invalid');
+    });
+
     $(document).on('click', '#saveAddProduct', function() {
         var $btn = $(this);
-        var odooId = $('#addProductOdooId').val();
+        var odooId = $('#addProductOdooId').val() ? $('#addProductOdooId').val().trim() : '';
+        var sku = $('#addProductSku').val() ? $('#addProductSku').val().trim() : '';
         var categoryId = $('#addProductCategory').val();
 
         // Reset errors
@@ -646,11 +672,20 @@ $(document).ready(function() {
 
         var hasError = false;
 
-        // Validate Odoo ID (required)
-        if (!odooId || odooId.trim() === '' || isNaN(odooId)) {
-            $('#addProductOdooIdError').text('Odoo ID is required and must be a number').show();
+        // Validate that at least one of Odoo ID or SKU is provided
+        if ((!odooId || odooId === '') && (!sku || sku === '')) {
+            $('#addProductOdooIdError').text('Either Odoo ID or SKU is required').show();
             $('#addProductOdooId').addClass('is-invalid');
+            $('#addProductSkuError').text('Either Odoo ID or SKU is required').show();
+            $('#addProductSku').addClass('is-invalid');
             hasError = true;
+        } else {
+            // Validate Odoo ID format if provided
+            if (odooId && odooId !== '' && isNaN(odooId)) {
+                $('#addProductOdooIdError').text('Odoo ID must be a number').show();
+                $('#addProductOdooId').addClass('is-invalid');
+                hasError = true;
+            }
         }
 
         // Collect and validate competitor URLs (optional)
@@ -714,9 +749,16 @@ $(document).ready(function() {
         showPageLoading();
 
         var postData = {
-            _token: "{{ csrf_token() }}",
-            odoo_id: odooId
+            _token: "{{ csrf_token() }}"
         };
+
+        // Add odoo_id or sku (at least one is required)
+        if (odooId && odooId !== '') {
+            postData.odoo_id = odooId;
+        }
+        if (sku && sku !== '') {
+            postData.sku = sku;
+        }
 
         // Add optional fields only if provided
         if (categoryId) {
@@ -738,14 +780,28 @@ $(document).ready(function() {
                 $('#addProductModal').modal('hide');
                 // Reset form
                 $('#addProductModal form')[0]?.reset();
+                $('#addProductOdooId').val('');
+                $('#addProductSku').val('');
                 $('.competitor-url-input').val('');
                 table.ajax.reload();
             } else {
                 toastr.error(response.message);
-                // Show error inline next to Odoo ID field if it's about Odoo ID
-                if (response.message && (response.message.toLowerCase().includes('not found') || response.message.toLowerCase().includes('odoo'))) {
-                    $('#addProductOdooIdError').text(response.message).show();
-                    $('#addProductOdooId').addClass('is-invalid');
+                // Show error inline next to appropriate field
+                if (response.message && (response.message.toLowerCase().includes('not found') || response.message.toLowerCase().includes('odoo') || response.message.toLowerCase().includes('sku'))) {
+                    // Determine which field to show error on based on what was provided
+                    if (odooId && odooId !== '') {
+                        $('#addProductOdooIdError').text(response.message).show();
+                        $('#addProductOdooId').addClass('is-invalid');
+                    } else if (sku && sku !== '') {
+                        $('#addProductSkuError').text(response.message).show();
+                        $('#addProductSku').addClass('is-invalid');
+                    } else {
+                        // Show on both if neither was provided
+                        $('#addProductOdooIdError').text(response.message).show();
+                        $('#addProductOdooId').addClass('is-invalid');
+                        $('#addProductSkuError').text(response.message).show();
+                        $('#addProductSku').addClass('is-invalid');
+                    }
                 }
             }
         }).fail(function(xhr) {
@@ -755,10 +811,22 @@ $(document).ready(function() {
             if (xhr.responseJSON && xhr.responseJSON.message) {
                 errorMessage = xhr.responseJSON.message;
                 toastr.error(errorMessage);
-                // Show error inline next to Odoo ID field if it's about Odoo ID
-                if (errorMessage.toLowerCase().includes('not found') || errorMessage.toLowerCase().includes('odoo')) {
-                    $('#addProductOdooIdError').text(errorMessage).show();
-                    $('#addProductOdooId').addClass('is-invalid');
+                // Show error inline next to appropriate field
+                if (errorMessage.toLowerCase().includes('not found') || errorMessage.toLowerCase().includes('odoo') || errorMessage.toLowerCase().includes('sku') || errorMessage.toLowerCase().includes('required')) {
+                    // Determine which field to show error on based on what was provided
+                    if (odooId && odooId !== '') {
+                        $('#addProductOdooIdError').text(errorMessage).show();
+                        $('#addProductOdooId').addClass('is-invalid');
+                    } else if (sku && sku !== '') {
+                        $('#addProductSkuError').text(errorMessage).show();
+                        $('#addProductSku').addClass('is-invalid');
+                    } else {
+                        // Show on both if neither was provided
+                        $('#addProductOdooIdError').text(errorMessage).show();
+                        $('#addProductOdooId').addClass('is-invalid');
+                        $('#addProductSkuError').text(errorMessage).show();
+                        $('#addProductSku').addClass('is-invalid');
+                    }
                 }
             } else {
                 toastr.error(errorMessage);

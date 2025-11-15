@@ -64,22 +64,20 @@ class CompetitorRepository
             return $competitor->price_class_name ?? 'N/A';
         })
         ->addColumn('actions', function ($competitor) {
-            $deleteButton = '';
-            if ($competitor->id !== auth()->id()) {
-                $deleteButton = '<span class="text-light">|</span>
-                        <form action="' . route('competitor.destroy', $competitor) . '" method="POST" style="display:inline" class="delete-form">
-                            ' . csrf_field() . '
-                            ' . method_field('DELETE') . '
-                            <button type="submit" class="btn btn-link text-danger p-0 m-0 align-baseline mx-2" style="font-size:inherit;" title="Delete">
-                                <i class="fas fa-trash m-0"></i>
-                            </button>
-                        </form>';
-                }
-                return '<div class="d-inline-flex gap-2 align-items-center">
-                    <a href="' . route('competitor.edit', $competitor) . '" class="mx-2" title="Edit"><i class="fas fa-edit"></i></a>
-                    ' . $deleteButton . '
-                </div>';
-            });
+            $deleteButton = '<span class="text-light">|</span>
+                    <form action="' . route('competitor.destroy', $competitor) . '" method="POST" style="display:inline" class="delete-form">
+                        ' . csrf_field() . '
+                        ' . method_field('DELETE') . '
+                        <button type="submit" class="btn btn-link text-danger p-0 m-0 align-baseline mx-2" style="font-size:inherit;" title="Delete">
+                            <i class="fas fa-trash m-0"></i>
+                        </button>
+                    </form>';
+            
+            return '<div class="d-inline-flex gap-2 align-items-center">
+                <a href="' . route('competitor.edit', $competitor) . '" class="mx-2" title="Edit"><i class="fas fa-edit"></i></a>
+                ' . $deleteButton . '
+            </div>';
+        });
 
         return $dataTable->rawColumns(['name', 'website_link', 'shortname', 'price_class_name', 'actions'])->make(true);
     }
