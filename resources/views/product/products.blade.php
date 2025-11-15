@@ -9,6 +9,188 @@
         .removeuppercase {
             text-transform: none !important;
         }
+        
+        /* Product Create Form Theme Styling */
+        #addProductModal .modal-header {
+            background: linear-gradient(135deg, #5f63f2 0%, #4347d9 100%);
+            border-bottom: none;
+            padding: 1.25rem 1.5rem;
+        }
+        
+        #addProductModal .modal-header .modal-title {
+            font-weight: 600;
+            font-size: 1.125rem;
+            letter-spacing: 0.3px;
+        }
+        
+        #addProductModal .modal-body {
+            background: #f8f9fb;
+        }
+        
+        #addProductModal .alert-info {
+            background: linear-gradient(135deg, rgba(44, 153, 255, 0.1) 0%, rgba(44, 153, 255, 0.05) 100%);
+            border: 1px solid rgba(44, 153, 255, 0.2);
+            border-left: 4px solid #2c99ff;
+            color: #1a73e8;
+            border-radius: 8px;
+        }
+        
+        #addProductModal .alert-info i {
+            color: #2c99ff;
+        }
+        
+        #addProductModal .alert-info strong {
+            color: #1a73e8;
+        }
+        
+        #addProductModal h6.text-primary {
+            color: #5f63f2 !important;
+            font-weight: 600;
+            font-size: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid rgba(95, 99, 242, 0.2);
+            margin-bottom: 1.25rem;
+        }
+        
+        #addProductModal h6.text-primary i {
+            color: #5f63f2;
+            background: rgba(95, 99, 242, 0.1);
+            padding: 0.5rem;
+            border-radius: 6px;
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #addProductModal .form-label {
+            color: #272b41;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        #addProductModal .form-control,
+        #addProductModal .form-select {
+            border: 1px solid #e3e6ef;
+            border-radius: 6px;
+            padding: 0.625rem 0.875rem;
+            transition: all 0.3s ease;
+            background: #ffffff;
+        }
+        
+        #addProductModal .form-control:focus,
+        #addProductModal .form-select:focus {
+            border-color: #5f63f2;
+            box-shadow: 0 0 0 0.2rem rgba(95, 99, 242, 0.15);
+            background: #ffffff;
+        }
+        
+        #addProductModal .input-group-text {
+            background: linear-gradient(135deg, #f8f9fb 0%, #f4f5f7 100%);
+            border: 1px solid #e3e6ef;
+            color: #5f63f2;
+            font-weight: 600;
+            border-right: none;
+        }
+        
+        #addProductModal .input-group .form-control {
+            border-left: none;
+        }
+        
+        #addProductModal .input-group:focus-within .input-group-text {
+            border-color: #5f63f2;
+            background: linear-gradient(135deg, rgba(95, 99, 242, 0.05) 0%, rgba(95, 99, 242, 0.02) 100%);
+        }
+        
+        #addProductModal .form-text {
+            color: #666d92;
+            font-size: 0.8125rem;
+            margin-top: 0.375rem;
+        }
+        
+        #addProductModal .form-text i {
+            color: #2c99ff;
+        }
+        
+        #addProductModal .text-danger {
+            color: #ff4d4f !important;
+        }
+        
+        #addProductModal .invalid-feedback {
+            color: #ff4d4f;
+            font-size: 0.8125rem;
+            margin-top: 0.25rem;
+        }
+        
+        #addProductModal .form-control.is-invalid,
+        #addProductModal .form-select.is-invalid {
+            border-color: #ff4d4f;
+        }
+        
+        #addProductModal .form-control.is-invalid:focus,
+        #addProductModal .form-select.is-invalid:focus {
+            border-color: #ff4d4f;
+            box-shadow: 0 0 0 0.2rem rgba(255, 77, 79, 0.15);
+        }
+        
+        #addProductModal hr {
+            border-color: #e3e6ef;
+            opacity: 1;
+            margin: 1.5rem 0;
+        }
+        
+        #addProductModal .modal-footer {
+            background: #ffffff;
+            border-top: 1px solid #e3e6ef;
+            padding: 1rem 1.5rem;
+        }
+        
+        #addProductModal .btn-primary {
+            background: linear-gradient(135deg, #5f63f2 0%, #4347d9 100%);
+            border: none;
+            border-radius: 6px;
+            padding: 0.625rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(95, 99, 242, 0.3);
+        }
+        
+        #addProductModal .btn-primary:hover {
+            background: linear-gradient(135deg, #4347d9 0%, #3639c4 100%);
+            box-shadow: 0 6px 16px rgba(95, 99, 242, 0.4);
+            transform: translateY(-1px);
+        }
+        
+        #addProductModal .btn-secondary {
+            background: #f8f9fb;
+            border: 1px solid #e3e6ef;
+            color: #666d92;
+            border-radius: 6px;
+            padding: 0.625rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        #addProductModal .btn-secondary:hover {
+            background: #f4f5f7;
+            border-color: #c6d0dc;
+            color: #272b41;
+        }
+        
+        #addProductModal .modal-content {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        #addProductModal .mb-4 {
+            background: #ffffff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #e3e6ef;
+        }
     </style>
 @endsection
 
@@ -19,18 +201,62 @@
             <div class="col-12">
                 <div class="card" style="box-shadow: 0 2px 8px rgba(0,0,0,0.04); width: 100%;">
                     <div class="card-body p-3">
-                        <div class="color-dark fw-500 d-flex justify-content-start mt-15 mx-4">
-                            <div class="input-container icon-left icon-right position-relative">
-                                <span class="input-icon icon-left">
-                                    <span data-feather="search"></span>
-                                </span>
-                                <span class="input-icon icon-right" onclick="clearSearch()">
-                                            <i data-feather="x" class="text-muted"></i>
-                                        </span>
-                                <input type="text" id="search" name="search" data-table="datatable"
-                                    autocomplete="off"
-                                    class="form-control form-control-solid w-250px ps-12 table_search"
-                                    placeholder="Search Product">
+                        <!-- Filter and Action Bar -->
+                        <div class="row g-3 align-items-end mb-3">
+                            <!-- Search Column -->
+                            <div class="col-12 col-md-3 col-lg-3">
+                                <label class="form-label small text-muted mb-1">Search Product</label>
+                                <div class="input-container icon-left icon-right position-relative">
+                                    <span class="input-icon icon-left">
+                                        <span data-feather="search"></span>
+                                    </span>
+                                    <span class="input-icon icon-right" onclick="clearSearch()" style="cursor: pointer;">
+                                        <i data-feather="x" class="text-muted"></i>
+                                    </span>
+                                    <input type="text" id="search" name="search" data-table="datatable"
+                                        autocomplete="off"
+                                        class="form-control form-control-solid ps-12 pe-12 table_search"
+                                        placeholder="Search by name or SKU">
+                                </div>
+                            </div>
+                            
+                            <!-- Category Filter -->
+                            <div class="col-12 col-md-2 col-lg-2">
+                                <label class="form-label small text-muted mb-1">Category</label>
+                                <select id="filterCategory" class="form-control form-control-solid">
+                                    <option value="">All Categories</option>
+                                    @foreach($categories as $category)
+                                        <option value="{{ $category }}">{{ $category }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            
+                            <!-- Competitor Filter -->
+                            <div class="col-12 col-md-2 col-lg-2">
+                                <label class="form-label small text-muted mb-1">Competitor</label>
+                                <select id="filterCompetitor" class="form-control form-control-solid">
+                                    <option value="">All Competitors</option>
+                                    @foreach($competitors as $competitor)
+                                        <option value="{{ $competitor->id }}">{{ $competitor->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            
+                            <!-- Price Sort Filter -->
+                            <div class="col-12 col-md-2 col-lg-2">
+                                <label class="form-label small text-muted mb-1">Sort Price</label>
+                                <select id="filterPriceSort" class="form-control form-control-solid" title="Select a competitor first to sort by price">
+                                    <option value="">Sort by Price</option>
+                                    <option value="low_to_high">Price: Low to High</option>
+                                    <option value="high_to_low">Price: High to Low</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Add Product Button -->
+                            <div class="col-12 col-md-3 col-lg-3 d-flex align-items-end justify-content-end">
+                                <button type="button" class="btn btn-primary btn-sm" id="addProductBtn">
+                                    <i class="fas fa-plus me-1"></i> Add Product
+                                </button>
                             </div>
                         </div>
                         <div class="table4 p-25 bg-white mb-30">
@@ -85,6 +311,126 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" id="saveCompetitorLink">Save Link</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal for adding product --}}
+<div class="modal fade" id="addProductModal" tabindex="-1" role="dialog" aria-labelledby="addProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus-circle me-2"></i>Add New Product
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Manual Entry Info -->
+                <div class="alert alert-info d-flex align-items-start mb-4" role="alert">
+                    <i class="fas fa-info-circle me-3 mt-1"></i>
+                    <div>
+                        <strong class="d-block mb-1">Manual Product Entry</strong>
+                        <small class="text-muted">Odoo ID will be auto-generated sequentially (001, 002, 003, etc.)</small>
+                    </div>
+                </div>
+                
+                <!-- Product Information Section -->
+                <div class="mb-4">
+                    <h6 class="text-primary mb-3">
+                        <i class="fas fa-box me-2"></i>Product Information
+                    </h6>
+                    
+                    <div class="mb-3">
+                        <label for="addProductName" class="form-label fw-semibold">
+                            Product Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="addProductName" placeholder="Enter product name">
+                        <div id="addProductNameError" class="invalid-feedback" style="display:none;"></div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="addProductSku" class="form-label fw-semibold">SKU / Default Code</label>
+                            <input type="text" class="form-control" id="addProductSku" placeholder="Enter SKU">
+                            <div id="addProductSkuError" class="invalid-feedback" style="display:none;"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="addProductPrice" class="form-label fw-semibold">Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                                <input type="number" step="0.01" min="0" class="form-control" id="addProductPrice" placeholder="0.00">
+                            </div>
+                            <div id="addProductPriceError" class="invalid-feedback" style="display:none;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="addProductBarcode" class="form-label fw-semibold">Barcode</label>
+                        <input type="text" class="form-control" id="addProductBarcode" placeholder="Enter barcode">
+                        <div id="addProductBarcodeError" class="invalid-feedback" style="display:none;"></div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Category & Competitor Section -->
+                <div class="mb-4">
+                    <h6 class="text-primary mb-3">
+                        <i class="fas fa-tags me-2"></i>Category & Competitor
+                    </h6>
+                    
+                    <div class="mb-3">
+                        <label for="addProductCategory" class="form-label fw-semibold">
+                            Category <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="addProductCategory" placeholder="Enter or select category" list="categoryList">
+                        <datalist id="categoryList">
+                            @foreach($categories as $category)
+                                <option value="{{ $category }}">
+                            @endforeach
+                        </datalist>
+                        <div id="addProductCategoryError" class="invalid-feedback" style="display:none;"></div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="addProductCompetitor" class="form-label fw-semibold">
+                                Competitor <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="addProductCompetitor" required>
+                                <option value="">Select Competitor</option>
+                                @foreach($competitors as $competitor)
+                                    <option value="{{ $competitor->id }}" data-website="{{ $competitor->website }}">{{ $competitor->name }}</option>
+                                @endforeach
+                            </select>
+                            <div id="addProductCompetitorError" class="invalid-feedback" style="display:none;"></div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="addProductCompetitorUrl" class="form-label fw-semibold">
+                                Competitor URL <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-link"></i></span>
+                                <input type="url" class="form-control" id="addProductCompetitorUrl" placeholder="Paste competitor product link" required>
+                            </div>
+                            <div id="addProductCompetitorUrlError" class="invalid-feedback" style="display:none;"></div>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i>Price will be automatically scraped from this URL
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="saveAddProduct">
+                    <i class="fas fa-save me-2"></i>Add Product
+                </button>
             </div>
         </div>
     </div>
@@ -152,6 +498,9 @@ $(document).ready(function() {
             data: function(data) {
                 hidePageLoading();
                 data.searchData = $('#search').val();
+                data.category = $('#filterCategory').val();
+                data.competitor_id = $('#filterCompetitor').val();
+                data.price_sort = $('#filterPriceSort').val();
             },
             complete: function() {
                 $('[data-bs-toggle="tooltip"]').tooltip('dispose');
@@ -220,11 +569,174 @@ $(document).ready(function() {
         table.ajax.reload();
     });
 
+    // Filter change handlers
+    $('#filterCategory').on('change', function() {
+        table.ajax.reload();
+    });
+
+    $('#filterCompetitor').on('change', function() {
+        // Clear price sort if competitor is cleared
+        if (!$(this).val()) {
+            $('#filterPriceSort').val('');
+        }
+        table.ajax.reload();
+    });
+
+    $('#filterPriceSort').on('change', function() {
+        var competitorId = $('#filterCompetitor').val();
+        if ($(this).val() && !competitorId) {
+            toastr.warning('Please select a competitor first to sort by price');
+            $(this).val('');
+            return;
+        }
+        table.ajax.reload();
+    });
+
     // Clear search function
     window.clearSearch = function() {
         $('#search').val('');
         table.ajax.reload();
     };
+
+    // Add Product Modal
+    $(document).on('click', '#addProductBtn', function() {
+        // Reset form fields
+        $('#addProductName').val('');
+        $('#addProductSku').val('');
+        $('#addProductPrice').val('');
+        $('#addProductBarcode').val('');
+        $('#addProductCategory').val('');
+        $('#addProductCompetitor').val('');
+        $('#addProductCompetitorUrl').val('');
+        // Reset errors
+        $('#addProductNameError, #addProductSkuError, #addProductPriceError, #addProductBarcodeError, #addProductCategoryError, #addProductCompetitorError, #addProductCompetitorUrlError').hide();
+        $('#addProductName, #addProductSku, #addProductPrice, #addProductBarcode, #addProductCategory, #addProductCompetitor, #addProductCompetitorUrl').removeClass('is-invalid');
+        $('#addProductModal').modal('show');
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    });
+
+    // Initialize on modal show
+    $(document).on('show.bs.modal', '#addProductModal', function() {
+        // Reset form
+        $('#addProductModal form')[0]?.reset();
+        $('.is-invalid').removeClass('is-invalid');
+        $('.invalid-feedback').hide();
+    });
+
+    $(document).on('click', '#saveAddProduct', function() {
+        var $btn = $(this);
+        var productName = $('#addProductName').val();
+        var productSku = $('#addProductSku').val();
+        var productPrice = $('#addProductPrice').val();
+        var productBarcode = $('#addProductBarcode').val();
+        var category = $('#addProductCategory').val();
+        var competitorId = $('#addProductCompetitor').val();
+        var competitorUrl = $('#addProductCompetitorUrl').val();
+        var competitorWebsite = $('#addProductCompetitor option:selected').data('website');
+
+        // Reset errors
+        $('#addProductNameError, #addProductSkuError, #addProductPriceError, #addProductBarcodeError, #addProductCategoryError, #addProductCompetitorError, #addProductCompetitorUrlError').hide();
+        $('#addProductName, #addProductSku, #addProductPrice, #addProductBarcode, #addProductCategory, #addProductCompetitor, #addProductCompetitorUrl').removeClass('is-invalid');
+
+        var hasError = false;
+
+        // Validate manual entry fields
+        if (!productName || productName.trim() === '') {
+            $('#addProductNameError').text('Product name is required').show();
+            $('#addProductName').addClass('is-invalid');
+            hasError = true;
+        }
+
+        if (!category || category.trim() === '') {
+            $('#addProductCategoryError').text('Category is required').show();
+            $('#addProductCategory').addClass('is-invalid');
+            hasError = true;
+        }
+
+        if (!competitorId) {
+            $('#addProductCompetitorError').text('Competitor is required').show();
+            $('#addProductCompetitor').addClass('is-invalid');
+            hasError = true;
+        }
+
+        if (!competitorUrl || competitorUrl.trim() === '') {
+            $('#addProductCompetitorUrlError').text('Competitor URL is required').show();
+            $('#addProductCompetitorUrl').addClass('is-invalid');
+            hasError = true;
+        }
+
+        // Validate URL domain if competitor website is set
+        if (competitorUrl && competitorWebsite) {
+            try {
+                const providedDomain = new URL(competitorUrl).hostname.replace(/^www\./, '').toLowerCase();
+                const competitorDomain = new URL(competitorWebsite).hostname.replace(/^www\./, '').toLowerCase();
+                if (providedDomain !== competitorDomain) {
+                    $('#addProductCompetitorUrlError').text(`URL domain does not match competitor's website. Expected: ${competitorDomain}`).show();
+                    $('#addProductCompetitorUrl').addClass('is-invalid');
+                    hasError = true;
+                }
+            } catch (e) {
+                $('#addProductCompetitorUrlError').text('Invalid URL format').show();
+                $('#addProductCompetitorUrl').addClass('is-invalid');
+                hasError = true;
+            }
+        }
+
+        if (hasError) {
+            return;
+        }
+
+        $btn.prop('disabled', true).text('Adding...');
+        showPageLoading();
+
+        var postData = {
+            _token: "{{ csrf_token() }}",
+            category: category,
+            competitor_id: competitorId,
+            competitor_url: competitorUrl
+        };
+
+        // Add manual fields (Odoo ID will be auto-generated on backend)
+        postData.name = productName;
+        if (productSku && productSku.trim() !== '') {
+            postData.default_code = productSku;
+        }
+        if (productPrice && productPrice.trim() !== '') {
+            postData.list_price = productPrice;
+        }
+        if (productBarcode && productBarcode.trim() !== '') {
+            postData.barcode = productBarcode;
+        }
+
+        $.post("{{ route('products.store') }}", postData).done(function(response) {
+            hidePageLoading();
+            $btn.prop('disabled', false).text('Add Product');
+            if (response.success) {
+                var message = response.message;
+                // Show generated Odoo ID
+                if (response.product && response.product.odoo_id) {
+                    message += ' (Odoo ID: ' + response.product.odoo_id + ')';
+                }
+                toastr.success(message);
+                $('#addProductModal').modal('hide');
+                // Reset form
+                $('#addProductModal form')[0]?.reset();
+                table.ajax.reload();
+            } else {
+                toastr.error(response.message);
+            }
+        }).fail(function(xhr) {
+            hidePageLoading();
+            $btn.prop('disabled', false).text('Add Product');
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                toastr.error(xhr.responseJSON.message);
+            } else {
+                toastr.error('Failed to add product');
+            }
+        });
+    });
 
     $(document).on("click", ".edit-price-btn", function() {
         $('#modalPriceProductId').val($(this).data("product-id"));

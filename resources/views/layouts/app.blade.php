@@ -8,15 +8,15 @@
     <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
     {{-- Title Section --}}
-    <title>{{ config('app.name') }} | @yield(
+    <title> PriceCompetitor | @yield(
         'title',
         $pageTitle ??
-            'Bootstrap 4 Laravel Web
-             Application'
+            'PriceCompetitor Laravel Web
+             PriceCompetitor Application'
     )
     </title>
-    {{-- Meta Data --}}
-    <meta name="description" content="@yield('page_description', $pageDescription ?? 'Bootstrap 4 Laravel Web Application')" />
+
+    <meta name="description" content="@yield('page_description', $pageDescription ?? 'PriceCompetitor Laravel Web Application')" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     {{-- Fonts --}}
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">

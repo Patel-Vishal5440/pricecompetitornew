@@ -111,6 +111,7 @@ Route::group(['middleware' => 'auth'], function () {
 
     Route::group(['prefix' => 'products'], function () {
         Route::get('/list', [ProductController::class, 'index'])->name('products.list');
+        Route::post('/store', [ProductController::class, 'store'])->name('products.store');
         Route::post('/add-link', [ProductController::class, 'addLink'])
         ->name('products.addLink');
         Route::post('/update-price', [ProductController::class, 'updatePrice'])

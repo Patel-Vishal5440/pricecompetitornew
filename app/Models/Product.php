@@ -16,7 +16,8 @@ class Product extends Model
         'list_price',
         'extra_data',
         'barcode',
-        'status'
+        'status',
+        'category'
     ];
 
     protected $casts = [
