@@ -203,7 +203,7 @@
                         <!-- Filter and Action Bar -->
                         <div class="row g-3 align-items-end mb-3">
                             <!-- Search Column -->
-                            <div class="col-12 col-md-6 col-lg-8">
+                            <div class="col-12 col-md-4 col-lg-4">
                                 <label class="form-label small text-muted mb-1">Search Category</label>
                                 <div class="input-container icon-left icon-right position-relative">
                                     <span class="input-icon icon-left">
@@ -216,13 +216,14 @@
                                         autocomplete="off"
                                         class="form-control form-control-solid ps-12 pe-12 table_search"
                                         placeholder="Search by name or description"
+                                        style="max-width: 100%;"
                                         maxlength="255">
                                 </div>
                             </div>
                             
                             <!-- Add Category Button -->
                             @if(auth()->user()->isAdmin() || auth()->user()->hasPermission('category.create'))
-                            <div class="col-12 col-md-6 col-lg-4 d-flex align-items-end justify-content-end">
+                            <div class="col-12 col-md-8 col-lg-8 d-flex align-items-end justify-content-end">
                                 <button type="button" class="btn btn-primary btn-sm" id="addCategoryBtn">
                                     <i class="fas fa-plus me-1"></i> Add Category
                                 </button>
