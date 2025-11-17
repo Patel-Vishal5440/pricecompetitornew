@@ -47,7 +47,8 @@ class StoreOdooProducts implements ShouldQueue
                         'name' => $product['name'] ?? null,
                         'default_code' => $product['default_code'] ?? null,
                         'list_price' => $product['list_price'] ?? 0,
-                        'barcode' => $product['barcode'] ?? null, // API doesn't provide barcode
+                        'cost' => $product['standard_price'] ?? 0,
+                        'barcode' => $product['barcode'] ?? null,
                     ]
                 );
                 

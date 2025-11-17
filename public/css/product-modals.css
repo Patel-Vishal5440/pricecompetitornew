@@ -1,0 +1,738 @@
+/* Product Modals - Optimized & Reusable CSS */
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+.removeuppercase {
+    text-transform: none !important;
+}
+
+/* ============================================
+   Action Buttons
+   ============================================ */
+.action-btn {
+    transition: all 0.3s ease;
+    font-weight: 500;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+.action-btn i {
+    font-size: 0.875rem;
+}
+
+#addProductBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(95, 99, 242, 0.3);
+}
+
+#importPriceUpdateBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3) !important;
+    background: #28a745 !important;
+}
+
+#importBulkProductsBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3) !important;
+    background: #17a2b8 !important;
+}
+
+/* ============================================
+   Reusable Modal Theme Class
+   ============================================ */
+.modal-themed {
+    /* Modal Header */
+    .modal-header {
+        background: linear-gradient(135deg, #5f63f2 0%, #4347d9 100%);
+        border-bottom: none;
+        padding: 1.25rem 1.5rem;
+    }
+
+    .modal-header .modal-title {
+        font-weight: 600;
+        font-size: 1.125rem;
+        letter-spacing: 0.3px;
+        color: #ffffff;
+    }
+
+    /* Modal Body */
+    .modal-body {
+        background: #f8f9fb;
+    }
+
+    /* Modal Content */
+    .modal-content {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Alert Info */
+    .alert-info {
+        background: linear-gradient(135deg, rgba(44, 153, 255, 0.1) 0%, rgba(44, 153, 255, 0.05) 100%);
+        border: 1px solid rgba(44, 153, 255, 0.2);
+        border-left: 4px solid #2c99ff;
+        color: #1a73e8;
+        border-radius: 8px;
+    }
+
+    .alert-info i {
+        color: #2c99ff;
+    }
+
+    .alert-info strong {
+        color: #1a73e8;
+    }
+
+    /* Section Headers */
+    h6.text-primary {
+        color: #5f63f2 !important;
+        font-weight: 600;
+        font-size: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid rgba(95, 99, 242, 0.2);
+        margin-bottom: 1.25rem;
+    }
+
+    h6.text-primary i {
+        color: #5f63f2;
+        background: rgba(95, 99, 242, 0.1);
+        padding: 0.5rem;
+        border-radius: 6px;
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Form Labels */
+    .form-label {
+        color: #272b41;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    /* Form Controls */
+    .form-control,
+    .form-select {
+        border: 1px solid #e3e6ef;
+        border-radius: 6px;
+        padding: 0.625rem 0.875rem;
+        transition: all 0.3s ease;
+        background: #ffffff;
+        width: 100%;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        min-height: 38px;
+    }
+    
+    /* Read-only fields - same size as editable fields */
+    .form-control[readonly] {
+        background-color: #f8f9fa !important;
+        cursor: not-allowed;
+        width: 100%;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        min-height: 38px;
+        padding: 0.625rem 0.875rem;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #5f63f2 !important;
+        box-shadow: 0 0 0 0.25rem rgba(95, 99, 242, 0.25), 0 0 0 0.1rem rgba(95, 99, 242, 0.1) !important;
+        background: #ffffff;
+        outline: none;
+        transform: scale(1.01);
+    }
+
+    .form-control:focus-visible,
+    .form-select:focus-visible {
+        border-color: #5f63f2 !important;
+        box-shadow: 0 0 0 0.25rem rgba(95, 99, 242, 0.25), 0 0 0 0.1rem rgba(95, 99, 242, 0.1) !important;
+        outline: none;
+    }
+
+    /* Input Groups */
+    .input-group-text {
+        background: linear-gradient(135deg, #f8f9fb 0%, #f4f5f7 100%);
+        border: 1px solid #e3e6ef;
+        color: #5f63f2;
+        font-weight: 600;
+        border-right: none;
+    }
+
+    .input-group .form-control {
+        border-left: none;
+    }
+
+    .input-group:focus-within .input-group-text {
+        border-color: #5f63f2 !important;
+        background: linear-gradient(135deg, rgba(95, 99, 242, 0.1) 0%, rgba(95, 99, 242, 0.05) 100%);
+        box-shadow: 0 0 0 0.1rem rgba(95, 99, 242, 0.1);
+    }
+
+    .input-group:focus-within .form-control {
+        border-color: #5f63f2 !important;
+        box-shadow: 0 0 0 0.25rem rgba(95, 99, 242, 0.25), 0 0 0 0.1rem rgba(95, 99, 242, 0.1) !important;
+        transform: scale(1.01);
+    }
+
+    /* Form Text */
+    .form-text {
+        color: #666d92;
+        font-size: 0.8125rem;
+        margin-top: 0.375rem;
+    }
+
+    .form-text i {
+        color: #2c99ff;
+    }
+
+    /* Validation States */
+    .text-danger {
+        color: #ff4d4f !important;
+    }
+
+    .invalid-feedback {
+        color: #ff4d4f;
+        font-size: 0.8125rem;
+        margin-top: 0.25rem;
+    }
+
+    .form-control.is-invalid,
+    .form-select.is-invalid {
+        border-color: #ff4d4f;
+    }
+
+    .form-control.is-invalid:focus,
+    .form-select.is-invalid:focus {
+        border-color: #ff4d4f;
+        box-shadow: 0 0 0 0.2rem rgba(255, 77, 79, 0.15);
+    }
+
+    /* Horizontal Rule */
+    hr {
+        border-color: #e3e6ef;
+        opacity: 1;
+        margin: 1.5rem 0;
+    }
+
+    /* Modal Footer */
+    .modal-footer {
+        background: #ffffff;
+        border-top: 1px solid #e3e6ef;
+        padding: 1rem 1.5rem;
+    }
+
+    /* Footer Buttons */
+    .modal-footer .btn {
+        min-width: 140px;
+        height: 42px;
+        font-weight: 500;
+        font-size: 0.9375rem;
+        border-radius: 8px;
+        padding: 0.625rem 1.5rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: none;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .modal-footer .btn i {
+        font-size: 0.875rem;
+        opacity: 0.95;
+        transition: all 0.3s ease;
+    }
+
+    .modal-footer .btn:hover i {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+    .modal-footer .btn:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+
+    /* Primary Button */
+    .btn-primary {
+        background: linear-gradient(135deg, #7c7ff5 0%, #6b6ee8 100%);
+        color: #ffffff;
+        box-shadow: 0 4px 14px 0 rgba(124, 127, 245, 0.35);
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #6b6ee8 0%, #5f63f2 100%);
+        box-shadow: 0 6px 20px 0 rgba(124, 127, 245, 0.45);
+        transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 10px 0 rgba(124, 127, 245, 0.3);
+    }
+
+    /* Secondary Button */
+    .modal-footer .btn-secondary {
+        background: #9ca3af;
+        color: #ffffff;
+        box-shadow: 0 2px 8px 0 rgba(156, 163, 175, 0.25);
+    }
+
+    .modal-footer .btn-secondary:hover {
+        background: #8b92a0;
+        box-shadow: 0 4px 12px 0 rgba(156, 163, 175, 0.35);
+        transform: translateY(-1px);
+    }
+
+    .modal-footer .btn-secondary:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 6px 0 rgba(156, 163, 175, 0.25);
+    }
+
+    /* Additional Styles */
+    .mb-4 {
+        background: #ffffff;
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid #e3e6ef;
+    }
+}
+
+/* ============================================
+   Apply Theme to Specific Modals
+   ============================================ */
+
+#addProductModal .modal-header,
+#importPriceUpdateModal .modal-header,
+#importBulkProductsModal .modal-header,
+#competitorLinkModal .modal-header,
+#priceEditModal .modal-header,
+#categoryModal .modal-header {
+    background: linear-gradient(135deg, #5f63f2 0%, #4347d9 100%);
+    border-bottom: none;
+    padding: 1.25rem 1.5rem;
+}
+
+#addProductModal .modal-header .modal-title,
+#importPriceUpdateModal .modal-header .modal-title,
+#importBulkProductsModal .modal-header .modal-title,
+#competitorLinkModal .modal-header .modal-title,
+#priceEditModal .modal-header .modal-title,
+#categoryModal .modal-header .modal-title {
+    font-weight: 600;
+    font-size: 1.125rem;
+    letter-spacing: 0.3px;
+    color: #ffffff;
+}
+
+#addProductModal .modal-body,
+#importPriceUpdateModal .modal-body,
+#importBulkProductsModal .modal-body,
+#competitorLinkModal .modal-body,
+#priceEditModal .modal-body,
+#categoryModal .modal-body {
+    background: #f8f9fb;
+}
+
+#addProductModal .modal-content,
+#importPriceUpdateModal .modal-content,
+#importBulkProductsModal .modal-content,
+#competitorLinkModal .modal-content,
+#priceEditModal .modal-content,
+#categoryModal .modal-content {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+#addProductModal .alert-info,
+#importPriceUpdateModal .alert-info,
+#importBulkProductsModal .alert-info {
+    background: linear-gradient(135deg, rgba(44, 153, 255, 0.1) 0%, rgba(44, 153, 255, 0.05) 100%);
+    border: 1px solid rgba(44, 153, 255, 0.2);
+    border-left: 4px solid #2c99ff;
+    color: #1a73e8;
+    border-radius: 8px;
+}
+
+#addProductModal .alert-info i,
+#importPriceUpdateModal .alert-info i,
+#importBulkProductsModal .alert-info i {
+    color: #2c99ff;
+}
+
+#addProductModal .alert-info strong,
+#importPriceUpdateModal .alert-info strong,
+#importBulkProductsModal .alert-info strong {
+    color: #1a73e8;
+}
+
+#addProductModal h6.text-primary,
+#importPriceUpdateModal h6.text-primary,
+#importBulkProductsModal h6.text-primary {
+    color: #5f63f2 !important;
+    font-weight: 600;
+    font-size: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(95, 99, 242, 0.2);
+    margin-bottom: 1.25rem;
+}
+
+#addProductModal h6.text-primary i,
+#importPriceUpdateModal h6.text-primary i,
+#importBulkProductsModal h6.text-primary i {
+    color: #5f63f2;
+    background: rgba(95, 99, 242, 0.1);
+    padding: 0.5rem;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#addProductModal .form-label,
+#importPriceUpdateModal .form-label,
+#importBulkProductsModal .form-label,
+#competitorLinkModal .form-label,
+#priceEditModal .form-label,
+#categoryModal .form-label {
+    color: #272b41;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+#addProductModal .form-control,
+#addProductModal .form-select,
+#importPriceUpdateModal .form-control,
+#importPriceUpdateModal .form-select,
+#importBulkProductsModal .form-control,
+#importBulkProductsModal .form-select,
+#competitorLinkModal .form-control,
+#competitorLinkModal .form-select,
+#priceEditModal .form-control,
+#priceEditModal .form-select,
+#categoryModal .form-control,
+#categoryModal .form-select,
+#categoryModal textarea {
+    border: 1px solid #e3e6ef;
+    border-radius: 6px;
+    padding: 0.625rem 0.875rem;
+    transition: all 0.3s ease;
+    background: #ffffff;
+}
+
+#addProductModal .form-control:focus,
+#addProductModal .form-select:focus,
+#importPriceUpdateModal .form-control:focus,
+#importPriceUpdateModal .form-select:focus,
+#importBulkProductsModal .form-control:focus,
+#importBulkProductsModal .form-select:focus,
+#competitorLinkModal .form-control:focus,
+#competitorLinkModal .form-select:focus,
+#priceEditModal .form-control:focus,
+#priceEditModal .form-select:focus,
+#categoryModal .form-control:focus,
+#categoryModal .form-select:focus,
+#categoryModal textarea:focus {
+    border-color: #5f63f2 !important;
+    box-shadow: 0 0 0 0.25rem rgba(95, 99, 242, 0.25), 0 0 0 0.1rem rgba(95, 99, 242, 0.1) !important;
+    background: #ffffff;
+    outline: none;
+    transform: scale(1.01);
+}
+
+#addProductModal .form-control:focus-visible,
+#addProductModal .form-select:focus-visible,
+#importPriceUpdateModal .form-control:focus-visible,
+#importPriceUpdateModal .form-select:focus-visible,
+#importBulkProductsModal .form-control:focus-visible,
+#importBulkProductsModal .form-select:focus-visible,
+#competitorLinkModal .form-control:focus-visible,
+#competitorLinkModal .form-select:focus-visible,
+#priceEditModal .form-control:focus-visible,
+#priceEditModal .form-select:focus-visible {
+    border-color: #5f63f2 !important;
+    box-shadow: 0 0 0 0.25rem rgba(95, 99, 242, 0.25), 0 0 0 0.1rem rgba(95, 99, 242, 0.1) !important;
+    outline: none;
+}
+
+#addProductModal .input-group-text,
+#importPriceUpdateModal .input-group-text,
+#importBulkProductsModal .input-group-text,
+#competitorLinkModal .input-group-text,
+#priceEditModal .input-group-text {
+    background: linear-gradient(135deg, #f8f9fb 0%, #f4f5f7 100%);
+    border: 1px solid #e3e6ef;
+    color: #5f63f2;
+    font-weight: 600;
+    border-right: none;
+}
+
+#addProductModal .input-group .form-control,
+#importPriceUpdateModal .input-group .form-control,
+#importBulkProductsModal .input-group .form-control,
+#competitorLinkModal .input-group .form-control,
+#priceEditModal .input-group .form-control {
+    border-left: none;
+}
+
+#addProductModal .input-group:focus-within .input-group-text,
+#importPriceUpdateModal .input-group:focus-within .input-group-text,
+#importBulkProductsModal .input-group:focus-within .input-group-text,
+#competitorLinkModal .input-group:focus-within .input-group-text,
+#priceEditModal .input-group:focus-within .input-group-text {
+    border-color: #5f63f2 !important;
+    background: linear-gradient(135deg, rgba(95, 99, 242, 0.1) 0%, rgba(95, 99, 242, 0.05) 100%);
+    box-shadow: 0 0 0 0.1rem rgba(95, 99, 242, 0.1);
+}
+
+#addProductModal .input-group:focus-within .form-control,
+#importPriceUpdateModal .input-group:focus-within .form-control,
+#importBulkProductsModal .input-group:focus-within .form-control,
+#competitorLinkModal .input-group:focus-within .form-control,
+#priceEditModal .input-group:focus-within .form-control {
+    border-color: #5f63f2 !important;
+    box-shadow: 0 0 0 0.25rem rgba(95, 99, 242, 0.25), 0 0 0 0.1rem rgba(95, 99, 242, 0.1) !important;
+    transform: scale(1.01);
+}
+
+#addProductModal .form-text,
+#importPriceUpdateModal .form-text,
+#importBulkProductsModal .form-text {
+    color: #666d92;
+    font-size: 0.8125rem;
+    margin-top: 0.375rem;
+}
+
+#addProductModal .form-text i,
+#importPriceUpdateModal .form-text i,
+#importBulkProductsModal .form-text i {
+    color: #2c99ff;
+}
+
+#addProductModal .text-danger,
+#importPriceUpdateModal .text-danger,
+#importBulkProductsModal .text-danger,
+#competitorLinkModal .text-danger,
+#priceEditModal .text-danger {
+    color: #ff4d4f !important;
+}
+
+#addProductModal .invalid-feedback,
+#importPriceUpdateModal .invalid-feedback,
+#importBulkProductsModal .invalid-feedback,
+#competitorLinkModal .invalid-feedback,
+#priceEditModal .invalid-feedback,
+#categoryModal .invalid-feedback {
+    color: #ff4d4f;
+    font-size: 0.8125rem;
+    margin-top: 0.25rem;
+}
+
+#addProductModal .form-control.is-invalid,
+#addProductModal .form-select.is-invalid,
+#importPriceUpdateModal .form-control.is-invalid,
+#importPriceUpdateModal .form-select.is-invalid,
+#importBulkProductsModal .form-control.is-invalid,
+#importBulkProductsModal .form-select.is-invalid,
+#competitorLinkModal .form-control.is-invalid,
+#competitorLinkModal .form-select.is-invalid,
+#priceEditModal .form-control.is-invalid,
+#priceEditModal .form-select.is-invalid,
+#categoryModal .form-control.is-invalid,
+#categoryModal .form-select.is-invalid,
+#categoryModal textarea.is-invalid {
+    border-color: #ff4d4f;
+}
+
+#addProductModal .form-control.is-invalid:focus,
+#addProductModal .form-select.is-invalid:focus,
+#importPriceUpdateModal .form-control.is-invalid:focus,
+#importPriceUpdateModal .form-select.is-invalid:focus,
+#importBulkProductsModal .form-control.is-invalid:focus,
+#importBulkProductsModal .form-select.is-invalid:focus,
+#competitorLinkModal .form-control.is-invalid:focus,
+#competitorLinkModal .form-select.is-invalid:focus,
+#priceEditModal .form-control.is-invalid:focus,
+#priceEditModal .form-select.is-invalid:focus,
+#categoryModal .form-control.is-invalid:focus,
+#categoryModal .form-select.is-invalid:focus,
+#categoryModal textarea.is-invalid:focus {
+    border-color: #ff4d4f;
+    box-shadow: 0 0 0 0.2rem rgba(255, 77, 79, 0.15);
+}
+
+#addProductModal hr,
+#importPriceUpdateModal hr,
+#importBulkProductsModal hr {
+    border-color: #e3e6ef;
+    opacity: 1;
+    margin: 1.5rem 0;
+}
+
+#addProductModal .modal-footer,
+#importPriceUpdateModal .modal-footer,
+#importBulkProductsModal .modal-footer,
+#priceEditModal .modal-footer,
+#competitorLinkModal .modal-footer,
+#categoryModal .modal-footer {
+    background: #ffffff;
+    border-top: 1px solid #e3e6ef;
+    padding: 1rem 1.5rem;
+}
+
+#addProductModal .modal-footer .btn,
+#importPriceUpdateModal .modal-footer .btn,
+#importBulkProductsModal .modal-footer .btn,
+#competitorLinkModal .modal-footer .btn,
+#priceEditModal .modal-footer .btn,
+#categoryModal .modal-footer .btn {
+    min-width: 140px;
+    height: 42px;
+    font-weight: 500;
+    font-size: 0.9375rem;
+    border-radius: 8px;
+    padding: 0.625rem 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+#addProductModal .btn-primary,
+#importPriceUpdateModal .btn-primary,
+#importBulkProductsModal .btn-primary,
+#priceEditModal .btn-primary,
+#competitorLinkModal .btn-primary,
+#categoryModal .btn-primary {
+    background: linear-gradient(135deg, #7c7ff5 0%, #6b6ee8 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 14px 0 rgba(124, 127, 245, 0.35);
+}
+
+#addProductModal .btn-primary:hover,
+#importPriceUpdateModal .btn-primary:hover,
+#importBulkProductsModal .btn-primary:hover,
+#priceEditModal .btn-primary:hover,
+#competitorLinkModal .btn-primary:hover,
+#categoryModal .btn-primary:hover {
+    background: linear-gradient(135deg, #6b6ee8 0%, #5f63f2 100%);
+    box-shadow: 0 6px 20px 0 rgba(124, 127, 245, 0.45);
+    transform: translateY(-1px);
+}
+
+#addProductModal .btn-primary:active,
+#importPriceUpdateModal .btn-primary:active,
+#importBulkProductsModal .btn-primary:active,
+#priceEditModal .btn-primary:active,
+#competitorLinkModal .btn-primary:active,
+#categoryModal .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px 0 rgba(124, 127, 245, 0.3);
+}
+
+#addProductModal .modal-footer .btn-secondary,
+#importPriceUpdateModal .modal-footer .btn-secondary,
+#importBulkProductsModal .modal-footer .btn-secondary,
+#competitorLinkModal .modal-footer .btn-secondary,
+#priceEditModal .modal-footer .btn-secondary,
+#categoryModal .modal-footer .btn-secondary {
+    background: #9ca3af;
+    color: #ffffff;
+    box-shadow: 0 2px 8px 0 rgba(156, 163, 175, 0.25);
+}
+
+#addProductModal .modal-footer .btn-secondary:hover,
+#importPriceUpdateModal .modal-footer .btn-secondary:hover,
+#importBulkProductsModal .modal-footer .btn-secondary:hover,
+#competitorLinkModal .modal-footer .btn-secondary:hover,
+#priceEditModal .modal-footer .btn-secondary:hover,
+#categoryModal .modal-footer .btn-secondary:hover {
+    background: #8b92a0;
+    box-shadow: 0 4px 12px 0 rgba(156, 163, 175, 0.35);
+    transform: translateY(-1px);
+}
+
+#addProductModal .modal-footer .btn-secondary:active,
+#importPriceUpdateModal .modal-footer .btn-secondary:active,
+#importBulkProductsModal .modal-footer .btn-secondary:active,
+#competitorLinkModal .modal-footer .btn-secondary:active,
+#priceEditModal .modal-footer .btn-secondary:active,
+#categoryModal .modal-footer .btn-secondary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px 0 rgba(156, 163, 175, 0.25);
+}
+
+#addProductModal .modal-footer .btn i,
+#importPriceUpdateModal .modal-footer .btn i,
+#importBulkProductsModal .modal-footer .btn i,
+#competitorLinkModal .modal-footer .btn i,
+#priceEditModal .modal-footer .btn i {
+    font-size: 0.875rem;
+    opacity: 0.95;
+    transition: all 0.3s ease;
+}
+
+#addProductModal .modal-footer .btn:hover i,
+#importPriceUpdateModal .modal-footer .btn:hover i,
+#importBulkProductsModal .modal-footer .btn:hover i,
+#competitorLinkModal .modal-footer .btn:hover i,
+#priceEditModal .modal-footer .btn:hover i {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+#addProductModal .modal-footer .btn:disabled,
+#importPriceUpdateModal .modal-footer .btn:disabled,
+#importBulkProductsModal .modal-footer .btn:disabled,
+#competitorLinkModal .modal-footer .btn:disabled,
+#priceEditModal .modal-footer .btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+#addProductModal .mb-4 {
+    background: #ffffff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e3e6ef;
+}
+
+/* ============================================
+   Sample File Link
+   ============================================ */
+.sample-file-link {
+    color: #5f63f2;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.sample-file-link:hover {
+    color: #4347d9;
+    text-decoration: underline;
+}
+

@@ -72,7 +72,194 @@ class ProductController extends Controller
 
         return response()->json(['message' => "Synced  products successfully!"], 200);
     }
-    
+
+    public function getCompetitorUrls(Request $request)
+    {
+        $request->validate([
+            'product_id' => 'required|integer|exists:products,id'
+        ]);
+
+        try {
+            $product = Product::findOrFail($request->product_id);
+            $competitorUrls = [];
+            
+            foreach ($product->competitorPrices as $competitorPrice) {
+                $competitorUrls[] = [
+                    'competitor_id' => $competitorPrice->competitor_id,
+                    'url' => $competitorPrice->competitor_url
+                ];
+            }
+            
+            return response()->json([
+                'success' => true,
+                'urls' => $competitorUrls
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Failed to get competitor URLs: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get competitor URLs'
+            ], 500);
+        }
+    }
+
+    public function update(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|integer|exists:products,id',
+            'category_id' => 'nullable|integer|exists:categories,id',
+            'list_price' => 'nullable|numeric|min:0',
+            'competitor_urls' => 'nullable|array',
+            'competitor_urls.*.competitor_id' => 'required_with:competitor_urls.*.competitor_url|integer|exists:competitors,id',
+            'competitor_urls.*.competitor_url' => 'required_with:competitor_urls.*.competitor_id|url'
+        ]);
+
+        try {
+            $product = Product::findOrFail($request->id);
+            $updateData = [];
+            $priceChanged = false;
+            
+            // Update category
+            if ($request->has('category_id')) {
+                if ($request->category_id) {
+                    $category = Category::find($request->category_id);
+                    if ($category) {
+                        $updateData['category_id'] = $request->category_id;
+                        $updateData['category'] = $category->name;
+                    }
+                } else {
+                    $updateData['category_id'] = null;
+                    $updateData['category'] = null;
+                }
+            }
+            
+            // Update price - only call Odoo API if price actually changed
+            if ($request->has('list_price') && $request->list_price !== null) {
+                $newPrice = (float)$request->list_price;
+                $currentPrice = (float)($product->list_price ?? 0);
+                
+                // Check if price actually changed
+                if (abs($newPrice - $currentPrice) > 0.01) { // Allow for floating point precision
+                    $updateData['list_price'] = $newPrice;
+                    $priceChanged = true;
+                    
+                    // Only update in Odoo if price changed and product has Odoo ID
+                    if ($product->odoo_id && !$this->isManualProduct($product->odoo_id)) {
+                        try {
+                            $this->odooService->updateProductPrice($product->odoo_id, $newPrice);
+                            Log::info("Price updated in Odoo", [
+                                'product_id' => $product->id,
+                                'odoo_id' => $product->odoo_id,
+                                'old_price' => $currentPrice,
+                                'new_price' => $newPrice
+                            ]);
+                        } catch (\Exception $e) {
+                            Log::warning("Failed to update price in Odoo: " . $e->getMessage());
+                            // Continue with local update even if Odoo update fails
+                        }
+                    }
+                }
+            }
+            
+            // Update product
+            if (!empty($updateData)) {
+                $product->update($updateData);
+            }
+            
+            // Update competitor URLs
+            if ($request->has('competitor_urls') && is_array($request->competitor_urls)) {
+                foreach ($request->competitor_urls as $urlData) {
+                    if (!empty($urlData['competitor_url'])) {
+                        // Check if URL already exists for this product-competitor combination
+                        $existingCompetitorPrice = ProductCompetitorPrice::where('product_id', $product->id)
+                            ->where('competitor_id', $urlData['competitor_id'])
+                            ->first();
+                        
+                        $urlChanged = false;
+                        if ($existingCompetitorPrice) {
+                            // Check if URL actually changed
+                            $existingUrl = $existingCompetitorPrice->competitor_url ?? '';
+                            if (trim($existingUrl) !== trim($urlData['competitor_url'])) {
+                                $urlChanged = true;
+                            }
+                        } else {
+                            // New URL, so it's a change
+                            $urlChanged = true;
+                        }
+                        
+                        $competitorPrice = ProductCompetitorPrice::updateOrCreate(
+                            [
+                                'product_id' => $product->id,
+                                'competitor_id' => $urlData['competitor_id']
+                            ],
+                            [
+                                'competitor_url' => $urlData['competitor_url']
+                            ]
+                        );
+                        
+                        // Trigger price scraping only if URL changed
+                        if ($urlChanged) {
+                            try {
+                                $price = $this->scrapeCompetitorPrice($urlData['competitor_url']);
+                                if ($price) {
+                                    $competitorPrice->update(['price' => $price]);
+                                    Log::info("Competitor price scraped successfully", [
+                                        'product_id' => $product->id,
+                                        'competitor_id' => $urlData['competitor_id'],
+                                        'url' => $urlData['competitor_url'],
+                                        'price' => $price
+                                    ]);
+                                } else {
+                                    Log::warning("No price found when scraping", [
+                                        'product_id' => $product->id,
+                                        'competitor_id' => $urlData['competitor_id'],
+                                        'url' => $urlData['competitor_url']
+                                    ]);
+                                }
+                            } catch (\Exception $e) {
+                                Log::warning("Failed to scrape competitor price: " . $e->getMessage(), [
+                                    'product_id' => $product->id,
+                                    'competitor_id' => $urlData['competitor_id'],
+                                    'url' => $urlData['competitor_url']
+                                ]);
+                            }
+                        }
+                    } else {
+                        // Remove URL if empty
+                        ProductCompetitorPrice::where('product_id', $product->id)
+                            ->where('competitor_id', $urlData['competitor_id'])
+                            ->update(['competitor_url' => null, 'price' => null]);
+                    }
+                }
+            }
+            
+            $message = 'Product updated successfully';
+            if ($priceChanged) {
+                $message .= ' (Price updated in Odoo)';
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => $message
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Failed to update product: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update product: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function isManualProduct($odooId)
+    {
+        if (is_null($odooId)) {
+            return true;
+        }
+        $odooIdString = (string) $odooId;
+        return strpos($odooIdString, '002') === 0;
+    }
+
     public function updatePrice(Request $request)
     {
         $request->validate([
@@ -127,6 +314,7 @@ class ProductController extends Controller
                 'name' => $product['name'] ?? null,
                 'default_code' => $product['default_code'] ?? null,
                 'list_price' => $product['list_price'] ?? 0,
+                'cost' => $product['standard_price'] ?? 0,
                 'barcode' => $product['barcode'] ?? null,
             ];
             
@@ -201,6 +389,7 @@ class ProductController extends Controller
                 'name' => $odooProduct['name'] ?? null,
                 'default_code' => $odooProduct['default_code'] ?? null,
                 'list_price' => $odooProduct['list_price'] ?? 0,
+                'cost' => $odooProduct['standard_price'] ?? 0,
                 'barcode' => $odooProduct['barcode'] ?? null,
             ]);
 
@@ -315,6 +504,442 @@ class ProductController extends Controller
             ]);
             return response()->json(['success' => false, 'message' => 'Internal server error'], 500);
         }
+    }
+
+    /**
+     * Import and update prices from CSV file
+     * CSV format: SKU, Price
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function importPriceUpdate(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:10240' // 10MB max
+        ]);
+
+        try {
+            $file = $request->file('file');
+            $path = $file->getRealPath();
+            
+            $results = [
+                'success' => 0,
+                'failed' => 0,
+                'errors' => []
+            ];
+
+            // Read CSV file
+            $handle = fopen($path, 'r');
+            if ($handle === false) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to read CSV file'
+                ], 400);
+            }
+
+            // Read header row and handle BOM
+            $header = fgetcsv($handle);
+            if ($header && !empty($header[0])) {
+                // Remove BOM if present
+                $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
+            }
+            $rowNumber = 1;
+
+            while (($row = fgetcsv($handle)) !== false) {
+                $rowNumber++;
+                
+                // Skip empty rows
+                if (empty(array_filter($row))) {
+                    continue;
+                }
+                
+                if (count($row) < 2) {
+                    $results['failed']++;
+                    $results['errors'][] = "Row {$rowNumber}: Insufficient columns (expected: SKU, Price). Found: " . count($row) . " columns";
+                    continue;
+                }
+
+                // Remove BOM from first column if present
+                $row[0] = preg_replace('/^\xEF\xBB\xBF/', '', $row[0]);
+                $sku = trim($row[0]);
+                $price = trim($row[1]);
+
+                if (empty($sku)) {
+                    $results['failed']++;
+                    $results['errors'][] = "Row {$rowNumber}: SKU is required";
+                    continue;
+                }
+
+                if (empty($price) || !is_numeric($price) || $price < 0) {
+                    $results['failed']++;
+                    $results['errors'][] = "Row {$rowNumber}: Valid price is required";
+                    continue;
+                }
+
+                // Find product by SKU
+                $product = Product::where('default_code', $sku)->first();
+                
+                if (!$product || !$product->odoo_id) {
+                    $results['failed']++;
+                    $results['errors'][] = "Row {$rowNumber}: Product with SKU '{$sku}' not found or has no Odoo ID";
+                    continue;
+                }
+
+                // Update price in Odoo
+                try {
+                    $response = $this->odooService->updateProductPrice($product->odoo_id, (float)$price);
+                    
+                    if (isset($response['success']) && $response['success']) {
+                        // Update local database
+                        $product->update(['list_price' => (float)$price]);
+                        $results['success']++;
+                    } else {
+                        $results['failed']++;
+                        $errorMsg = $response['message'] ?? ($response['error'] ?? 'Unknown error');
+                        $results['errors'][] = "Row {$rowNumber}: Failed to update price for SKU '{$sku}' - " . $errorMsg;
+                        Log::warning("Price update failed for SKU: {$sku}", [
+                            'odoo_id' => $product->odoo_id,
+                            'price' => $price,
+                            'response' => $response
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    $results['failed']++;
+                    $results['errors'][] = "Row {$rowNumber}: Exception updating price for SKU '{$sku}' - " . $e->getMessage();
+                    Log::error("Price update exception for SKU: {$sku}", [
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                }
+            }
+
+            fclose($handle);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Import completed. Success: {$results['success']}, Failed: {$results['failed']}",
+                'results' => $results
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Import Price Update Error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Import failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Import bulk products from CSV file
+     * CSV format: SKU (FOR US), Competitor URL 1, Competitor URL 2, ... (supports any competitors)
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function importBulkProducts(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:10240' // 10MB max
+        ]);
+
+        try {
+            // Get all competitors for domain matching
+            $competitors = Competitor::all();
+            
+            if ($competitors->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No competitors found in database'
+                ], 400);
+            }
+
+            $file = $request->file('file');
+            $path = $file->getRealPath();
+            
+            $results = [
+                'success' => 0,
+                'failed' => 0,
+                'errors' => []
+            ];
+
+            // Read CSV file
+            $handle = fopen($path, 'r');
+            if ($handle === false) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to read CSV file'
+                ], 400);
+            }
+
+            // Read header row and handle BOM
+            $header = fgetcsv($handle);
+            if ($header && !empty($header[0])) {
+                // Remove BOM if present
+                $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
+            }
+            $rowNumber = 1;
+            
+            Log::info('Bulk import started', [
+                'header' => $header,
+                'competitors_count' => $competitors->count()
+            ]);
+
+            while (($row = fgetcsv($handle)) !== false) {
+                $rowNumber++;
+                
+                // Skip empty rows
+                if (empty(array_filter($row))) {
+                    continue;
+                }
+                
+                if (count($row) < 2) {
+                    $results['failed']++;
+                    $results['errors'][] = "Row {$rowNumber}: Insufficient columns (expected: SKU, and at least one Competitor URL). Found: " . count($row) . " columns";
+                    continue;
+                }
+
+                // Remove BOM from first column if present
+                $row[0] = preg_replace('/^\xEF\xBB\xBF/', '', $row[0]);
+                $sku = trim($row[0]);
+                
+                if (empty($sku)) {
+                    $results['failed']++;
+                    $results['errors'][] = "Row {$rowNumber}: SKU is required";
+                    continue;
+                }
+
+                // Fetch product from Odoo by SKU
+                try {
+                    $response = $this->odooService->fetchProductBySku($sku);
+                    
+                    if (!isset($response['success']) || !$response['success'] || empty($response['result'])) {
+                        $results['failed']++;
+                        $errorMsg = $response['message'] ?? 'Product not found in Odoo';
+                        $results['errors'][] = "Row {$rowNumber}: Product with SKU '{$sku}' not found in Odoo - " . $errorMsg;
+                        Log::warning("Bulk import: Product not found", ['sku' => $sku, 'response' => $response]);
+                        continue;
+                    }
+
+                    $odooProduct = $response['result'][0];
+
+                    // Create or update product
+                    $product = Product::updateOrCreate(
+                        ['odoo_id' => $odooProduct['id']],
+                        [
+                            'name' => $odooProduct['name'] ?? null,
+                            'default_code' => $odooProduct['default_code'] ?? null,
+                            'list_price' => $odooProduct['list_price'] ?? 0,
+                            'barcode' => $odooProduct['barcode'] ?? null,
+                        ]
+                    );
+
+                    $urlsAdded = 0;
+                    $rowErrors = [];
+
+                    // Process all URL columns (starting from index 1)
+                    for ($i = 1; $i < count($row); $i++) {
+                        $url = trim($row[$i]);
+                        
+                        if (empty($url)) {
+                            continue; // Skip empty URLs
+                        }
+
+                        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+                            $rowErrors[] = "Column " . ($i + 1) . ": Invalid URL format";
+                            continue;
+                        }
+
+                        // Find matching competitor by domain
+                        $matchedCompetitor = null;
+                        foreach ($competitors as $competitor) {
+                            if ($competitor->website && $this->validateDomainMatch($url, $competitor->website)) {
+                                $matchedCompetitor = $competitor;
+                                break;
+                            }
+                        }
+
+                        if (!$matchedCompetitor) {
+                            $parsedUrl = parse_url($url, PHP_URL_HOST);
+                            $rowErrors[] = "Column " . ($i + 1) . ": URL domain '{$parsedUrl}' does not match any competitor";
+                            Log::warning("Bulk import: Domain mismatch", [
+                                'url' => $url,
+                                'parsed_host' => $parsedUrl,
+                                'competitors' => $competitors->pluck('website')->toArray()
+                            ]);
+                            continue;
+                        }
+
+                        try {
+                            // Add competitor URL
+                            $productCompetitorPrice = ProductCompetitorPrice::updateOrCreate(
+                                [
+                                    'product_id' => $product->id,
+                                    'competitor_id' => $matchedCompetitor->id
+                                ],
+                                ['competitor_url' => $url]
+                            );
+
+                            // Scrape price (non-blocking - don't fail if scraping fails)
+                            try {
+                                $price = $this->scrapeCompetitorPrice($url);
+                                if ($price) {
+                                    $productCompetitorPrice->update(['price' => $price]);
+                                }
+                            } catch (\Exception $e) {
+                                Log::warning("Bulk import: Price scraping failed", [
+                                    'url' => $url,
+                                    'error' => $e->getMessage()
+                                ]);
+                                // Continue even if scraping fails
+                            }
+                            
+                            $urlsAdded++;
+                        } catch (\Exception $e) {
+                            $rowErrors[] = "Column " . ($i + 1) . ": Failed to add URL - " . $e->getMessage();
+                            Log::error("Bulk import: Failed to add competitor URL", [
+                                'url' => $url,
+                                'error' => $e->getMessage()
+                            ]);
+                        }
+                    }
+
+                    // Add row-level errors to results
+                    if (!empty($rowErrors)) {
+                        foreach ($rowErrors as $error) {
+                            $results['errors'][] = "Row {$rowNumber}: {$error}";
+                        }
+                    }
+
+                    if ($urlsAdded > 0) {
+                        $results['success']++;
+                    } else {
+                        $results['failed']++;
+                        if (empty($rowErrors)) {
+                            $results['errors'][] = "Row {$rowNumber}: No valid URLs provided";
+                        }
+                    }
+                } catch (\Exception $e) {
+                    $results['failed']++;
+                    $results['errors'][] = "Row {$rowNumber}: Exception processing SKU '{$sku}' - " . $e->getMessage();
+                    Log::error("Bulk import: Exception", [
+                        'sku' => $sku,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                }
+            }
+
+            fclose($handle);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Import completed. Success: {$results['success']}, Failed: {$results['failed']}",
+                'results' => $results
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Import Bulk Products Error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Import failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Download sample CSV file for price update import
+     * 
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     */
+    public function downloadPriceUpdateSample()
+    {
+        $filename = 'price_update_sample.csv';
+        
+        return response()->streamDownload(function () {
+            $file = fopen('php://output', 'w');
+            
+            // Add BOM for UTF-8
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            // Header row
+            fputcsv($file, ['SKU', 'Price']);
+            
+            // Sample data rows
+            fputcsv($file, ['SKU001', '29.99']);
+            
+            fclose($file);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    /**
+     * Download sample CSV file for bulk products import
+     * 
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     */
+    public function downloadBulkProductsSample()
+    {
+        $filename = 'bulk_products_sample.csv';
+        
+        return response()->streamDownload(function () {
+            $file = fopen('php://output', 'w');
+            
+            // Add BOM for UTF-8
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            // Get actual competitors from database for example
+            $competitors = Competitor::limit(3)->get();
+            $header = ['SKU (FOR US)'];
+            
+            // Add competitor columns based on available competitors
+            foreach ($competitors as $competitor) {
+                $header[] = $competitor->name . ' URL';
+            }
+            
+            // If no competitors, use example columns
+            if ($competitors->isEmpty()) {
+                $header = ['SKU (FOR US)', 'Competitor 1 URL', 'Competitor 2 URL'];
+            }
+            
+            // Header row
+            fputcsv($file, $header);
+            
+            // Sample data rows
+            if (!$competitors->isEmpty()) {
+                // Use actual competitor websites if available
+                $urls = [];
+                foreach ($competitors as $competitor) {
+                    if ($competitor->website) {
+                        $urls[] = rtrim($competitor->website, '/') . '/product/example1';
+                    } else {
+                        $urls[] = 'https://example.com/product/example1';
+                    }
+                }
+                fputcsv($file, array_merge(['SKU001'], $urls));
+            } else {
+                // Fallback example
+                fputcsv($file, [
+                    'SKU001',
+                    'https://competitor1.com/product/example1',
+                    'https://competitor2.com/product/example1'
+                ]);
+            }
+            
+            fclose($file);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 
     /**

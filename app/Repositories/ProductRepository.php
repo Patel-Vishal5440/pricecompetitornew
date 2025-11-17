@@ -3,6 +3,7 @@ namespace App\Repositories;
 
 use App\Models\Product;
 use App\Models\Competitor;
+use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Builder;
 use Yajra\DataTables\DataTables;
@@ -73,7 +74,10 @@ class ProductRepository
         // Apply select and distinct if we did a join (must be before orderBy)
         if ($needsJoin) {
             $product->select('products.*', 'product_competitor_prices.price as competitor_price')
+                    ->with('category')
                     ->distinct();
+        } else {
+            $product->with('category');
         }
 
         // Handle price sorting by competitor price (after select)
@@ -92,16 +96,73 @@ class ProductRepository
         $competitors = Competitor::orderBy('id','DESC')->get();
         $dataTable = DataTables::of($product);
 
-        $dataTable->addColumn('action', function ($product) {
-                // Only show sync button if product has a valid Odoo ID (not manually created)
-                if ($product->odoo_id && !$this->isManualProduct($product->odoo_id)) {
-                    $syncButton = "<a href='javascript:void(0);' 
-                        class='btn btn-icon btn-sm btn-light-primary sync-product m-2 text-light' 
-                        data-product-id='{$product->odoo_id}'>
-                        <i class='fas fa-sync fs-6 m-0'></i></a>";
-                    return $syncButton;
+        // Add category display column - matching category module status format
+        $dataTable->addColumn('category_display', function ($product) {
+            try {
+                $categoryName = '';
+                if ($product->category_id && $product->relationLoaded('category') && $product->category) {
+                    $categoryName = $product->category->name;
+                } elseif ($product->category_id) {
+                    $category = Category::find($product->category_id);
+                    if ($category) {
+                        $categoryName = $category->name;
+                    }
+                } elseif ($product->category) {
+                    $categoryName = $product->category;
                 }
-                return '<span class="text-muted">Manual</span>';
+                
+                if (empty($categoryName)) {
+                    $categoryName = 'No Category';
+                }
+                
+                // Match category module status display format - rectangle with border
+                $borderColor = '#6c757d'; // Gray border for category
+                $textColor = '#6c757d';
+                return "<span style='display: inline-block; padding: 6px 12px; border: 1px solid {$borderColor}; border-radius: 4px; background-color: transparent; color: {$textColor}; font-size: 12px; font-weight: 500; text-align: center; min-width: 80px;'>
+                    {$categoryName}
+                </span>";
+            } catch (\Exception $e) {
+                $categoryName = $product->category ?? 'No Category';
+                $borderColor = '#6c757d';
+                $textColor = '#6c757d';
+                return "<span style='display: inline-block; padding: 6px 12px; border: 1px solid {$borderColor}; border-radius: 4px; background-color: transparent; color: {$textColor}; font-size: 12px; font-weight: 500; text-align: center; min-width: 80px;'>
+                    {$categoryName}
+                </span>";
+            }
+        })
+        ->addColumn('category_id', function ($product) {
+            return $product->category_id ?? null;
+        });
+
+        $dataTable->addColumn('action', function ($product) use ($competitors) {
+                $buttons = '';
+                
+                // Edit button - match category module button style (btn-link)
+                $buttons .= "<button type='button' 
+                    class='btn btn-link p-0 m-0 align-baseline mx-2 edit-product-btn' 
+                    style='font-size:inherit;' 
+                    data-product-id='{$product->id}'
+                    data-product-name='" . htmlspecialchars($product->name, ENT_QUOTES) . "'
+                    data-product-sku='" . htmlspecialchars($product->default_code ?? '', ENT_QUOTES) . "'
+                    data-product-price='{$product->list_price}'
+                    data-product-category-id='" . ($product->category_id ?? '') . "'
+                    title='Edit Product'>
+                    <i class='fas fa-edit m-0'></i>
+                </button>";
+                
+                // Sync button - only show if product has a valid Odoo ID (not manually created)
+                if ($product->odoo_id && !$this->isManualProduct($product->odoo_id)) {
+                    $buttons .= "<span class='text-light'>|</span>
+                        <a href='javascript:void(0);' 
+                            class='btn btn-link p-0 m-0 align-baseline mx-2 sync-product' 
+                            style='font-size:inherit;'
+                            data-product-id='{$product->odoo_id}'
+                            title='Sync Product'>
+                            <i class='fas fa-sync m-0'></i>
+                        </a>";
+                }
+                
+                return '<div class="d-inline-flex gap-2 align-items-center">' . $buttons . '</div>';
             })
             ->addColumn('status', function ($product) {
                 return "<span class='badge " . ($product->status ? 'bg-success' : 'bg-danger') . "'>" . 
@@ -125,7 +186,7 @@ class ProductRepository
                 });
             }
             
-            return $dataTable->rawColumns(['action', 'status'])->make(true);
+            return $dataTable->rawColumns(['action', 'status', 'category_display'])->make(true);
     }
 
     /**

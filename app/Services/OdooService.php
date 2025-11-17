@@ -62,7 +62,7 @@ class OdooService
                     "search_read",
                     [],
                     [
-                        "fields" => ["id", "name", "default_code", "list_price", "qty_available", "barcode"],
+                        "fields" => ["id", "name", "default_code", "list_price", "standard_price", "qty_available", "barcode"],
                         "limit" => 10
                     ]
                 ]
@@ -72,8 +72,13 @@ class OdooService
     }
     public function updateProductPrice($productId, $newPrice)
     {
-
-        // try {
+        try {
+            // Ensure authentication
+            if (!$this->user_id) {
+                $result = $this->authenticate();
+                $this->user_id = $result;
+            }
+            
             // First, update the price
             $updateResponse = Http::post($this->url, [
                 "jsonrpc" => "2.0",
@@ -143,13 +148,13 @@ class OdooService
                 ]
             ];
 
-        // } catch (\Exception $e) {
-        //     return [
-        //         'success' => false,
-        //         'message' => 'Request failed',
-        //         'error' => $e->getMessage()
-        //     ];
-        // }
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Request failed: ' . $e->getMessage(),
+                'error' => $e->getMessage()
+            ];
+        }
     }
     public function fetchSpecificProduct($odooId)
     {
@@ -174,7 +179,7 @@ class OdooService
                         "search_read",
                         [[['id', '=', (int)$odooId]]],
                         [
-                            "fields" => ["id", "name", "default_code", "list_price", "qty_available", "barcode"],
+                            "fields" => ["id", "name", "default_code", "list_price", "standard_price", "qty_available", "barcode"],
                             "limit" => 1
                         ]
                     ]
@@ -238,7 +243,7 @@ class OdooService
                         "search_read",
                         [[['default_code', '=', $sku]]],
                         [
-                            "fields" => ["id", "name", "default_code", "list_price", "qty_available", "barcode"],
+                            "fields" => ["id", "name", "default_code", "list_price", "standard_price", "qty_available", "barcode"],
                             "limit" => 1
                         ]
                     ]

@@ -51,16 +51,20 @@ class CategoryRepository
             return $category->description ?? 'N/A';
         })
         ->addColumn('status', function ($category) {
-            $statusClass = $category->status === 'active' ? 'bg-success' : 'bg-danger';
+            $borderColor = $category->status === 'active' ? '#28a745' : '#dc3545';
+            $textColor = $category->status === 'active' ? '#28a745' : '#dc3545';
             $statusIcon = $category->status === 'active' ? 'fa-check-circle' : 'fa-times-circle';
-            return "<span class='badge {$statusClass} px-3 py-2'>
+            return "<span style='display: inline-block; padding: 6px 12px; border: 1px solid {$borderColor}; border-radius: 4px; background-color: transparent; color: {$textColor}; font-size: 12px; font-weight: 500; text-align: center; min-width: 80px;'>
                 <i class='fas {$statusIcon} me-1'></i>" . ucfirst($category->status) . "
             </span>";
         })
         ->addColumn('products_count', function ($category) {
             $count = $category->products()->count();
-            return "<span class='badge bg-info px-3 py-2'>
-                <i class='fas fa-folder me-1'></i>{$count}
+            $borderColor = '#17a2b8';
+            $textColor = '#17a2b8';
+            return "<span style='display: inline-block; padding: 6px 12px; border: 1px solid {$borderColor}; border-radius: 4px; background-color: transparent; color: {$textColor}; font-size: 12px; font-weight: 500; text-align: center; min-width: 60px;'>
+                <i class='fas fa-folder me-1'></i><br>{$count}
+                <span style='font-size: 10px; color: {$textColor};'>Products</span>
             </span>";
         })
         ->addColumn('actions', function ($category) {
@@ -68,26 +72,29 @@ class CategoryRepository
             $deleteButton = '';
             
             if (auth()->user()->isAdmin() || auth()->user()->hasPermission('category.edit')) {
-                $editButton = '<button type="button" class="btn btn-sm btn-warning edit-category-btn" 
+                $editButton = '<button type="button" class="btn btn-link p-0 m-0 align-baseline mx-2 edit-category-btn" 
+                    style="font-size:inherit;" 
                     data-id="' . $category->id . '" 
                     data-name="' . htmlspecialchars($category->name) . '" 
                     data-description="' . htmlspecialchars($category->description ?? '') . '" 
                     data-status="' . $category->status . '" 
                     title="Edit Category">
-                    <i class="fas fa-edit"></i>
+                    <i class="fas fa-edit m-0"></i>
                 </button>';
             }
             
             if (auth()->user()->isAdmin() || auth()->user()->hasPermission('category.delete')) {
-                $deleteButton = '<button type="button" class="btn btn-sm btn-danger delete-category-btn" 
-                    data-id="' . $category->id . '" 
-                    data-name="' . htmlspecialchars($category->name) . '" 
-                    title="Delete Category">
-                    <i class="fas fa-trash"></i>
-                </button>';
+                $deleteButton = '<span class="text-light">|</span>
+                    <button type="button" class="btn btn-link text-danger p-0 m-0 align-baseline mx-2 delete-category-btn" 
+                        style="font-size:inherit;" 
+                        data-id="' . $category->id . '" 
+                        data-name="' . htmlspecialchars($category->name) . '" 
+                        title="Delete Category">
+                        <i class="fas fa-trash m-0"></i>
+                    </button>';
             }
             
-            return '<div class="d-flex justify-content-center gap-2">' . $editButton . $deleteButton . '</div>';
+            return '<div class="d-inline-flex gap-2 align-items-center">' . $editButton . $deleteButton . '</div>';
         });
 
         return $dataTable->rawColumns(['name', 'description', 'status', 'products_count', 'actions'])->make(true);

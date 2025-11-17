@@ -124,10 +124,16 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/add-link', [ProductController::class, 'addLink'])
         ->name('products.addLink');
         Route::post('/update-price', [ProductController::class, 'updatePrice'])
-        ->name('products.updatePrice');
+            ->name('products.updatePrice');
+        Route::post('/update', [ProductController::class, 'update'])->name('products.update');
+        Route::get('/get-competitor-urls', [ProductController::class, 'getCompetitorUrls'])->name('products.getCompetitorUrls');
         Route::get('/sync-specific', [ProductController::class, 'syncSpecificProduct'])->name('products.sync-specific');
         // Route::get('/sync-products', [ProductController::class, 'syncProducts']);
         Route::get('/sync-products', [ProductController::class, 'syncProducts'])->name('products.syncProducts');
+        Route::post('/import-price-update', [ProductController::class, 'importPriceUpdate'])->name('products.importPriceUpdate');
+        Route::post('/import-bulk-products', [ProductController::class, 'importBulkProducts'])->name('products.importBulkProducts');
+        Route::get('/download-price-update-sample', [ProductController::class, 'downloadPriceUpdateSample'])->name('products.downloadPriceUpdateSample');
+        Route::get('/download-bulk-products-sample', [ProductController::class, 'downloadBulkProductsSample'])->name('products.downloadBulkProductsSample');
     });
 
     Route::group(['prefix' => 'cron-jobs'], function () {

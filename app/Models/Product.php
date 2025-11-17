@@ -14,6 +14,7 @@ class Product extends Model
         'name',
         'default_code',
         'list_price',
+        'cost',
         'extra_data',
         'barcode',
         'status',
