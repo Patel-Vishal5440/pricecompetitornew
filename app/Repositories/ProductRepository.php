@@ -16,6 +16,8 @@ class ProductRepository
         $competitorId = $request->get('competitor_id', null);
         $priceSort = $request->get('price_sort', null); // 'low_to_high' or 'high_to_low'
         $priceComparison = $request->get('price_comparison', null); // 'higher' or 'lower'
+        $isExport = $request->get('export', false);
+        $length = $request->get('length', 10);
 
         $product = Product::query()
             ->when($searchData, function (Builder $query, $searchData) {
@@ -39,24 +41,42 @@ class ProductRepository
             });
 
         // Determine if we need to join the competitor prices table
+        // Only join when we have a specific competitor (for price comparison or sorting)
+        // For "All Competitors" comparison, we use whereHas instead of join
         $needsJoin = ($priceComparison && $competitorId) || ($priceSort && $competitorId);
         
         // Handle price comparison filter (higher/lower than product's own price)
-        if ($priceComparison && $competitorId) {
-            $product->leftJoin('product_competitor_prices', function($join) use ($competitorId) {
-                $join->on('products.id', '=', 'product_competitor_prices.product_id')
-                     ->where('product_competitor_prices.competitor_id', '=', $competitorId)
-                     ->whereNotNull('product_competitor_prices.price');
-            })
-            ->whereNotNull('products.list_price')
-            ->whereNotNull('product_competitor_prices.price');
-            
-            if ($priceComparison === 'higher') {
-                // Competitor price is higher than product's own price
-                $product->whereColumn('product_competitor_prices.price', '>', 'products.list_price');
-            } elseif ($priceComparison === 'lower') {
-                // Competitor price is lower than product's own price
-                $product->whereColumn('product_competitor_prices.price', '<', 'products.list_price');
+        if ($priceComparison) {
+            if ($competitorId) {
+                // Specific competitor comparison
+                $product->leftJoin('product_competitor_prices', function($join) use ($competitorId) {
+                    $join->on('products.id', '=', 'product_competitor_prices.product_id')
+                         ->where('product_competitor_prices.competitor_id', '=', $competitorId)
+                         ->whereNotNull('product_competitor_prices.price');
+                })
+                ->whereNotNull('products.list_price')
+                ->whereNotNull('product_competitor_prices.price');
+                
+                if ($priceComparison === 'higher') {
+                    // Competitor price is higher than product's own price
+                    $product->whereColumn('product_competitor_prices.price', '>', 'products.list_price');
+                } elseif ($priceComparison === 'lower') {
+                    // Competitor price is lower than product's own price
+                    $product->whereColumn('product_competitor_prices.price', '<', 'products.list_price');
+                }
+            } else {
+                // All competitors comparison - check if ANY competitor meets the condition
+                $product->whereNotNull('products.list_price')
+                        ->whereHas('competitorPrices', function($q) use ($priceComparison) {
+                            $q->whereNotNull('price');
+                            if ($priceComparison === 'higher') {
+                                // At least one competitor price is higher than product's own price
+                                $q->whereRaw('product_competitor_prices.price > (SELECT list_price FROM products WHERE products.id = product_competitor_prices.product_id)');
+                            } elseif ($priceComparison === 'lower') {
+                                // At least one competitor price is lower than product's own price
+                                $q->whereRaw('product_competitor_prices.price < (SELECT list_price FROM products WHERE products.id = product_competitor_prices.product_id)');
+                            }
+                        });
             }
         }
 
@@ -88,13 +108,19 @@ class ProductRepository
             $product->latest('id');
         }
 
-        return $this->productDataTable($product, $priceSort, $competitorId);
+        return $this->productDataTable($product, $priceSort, $competitorId, $isExport, $length);
     }
 
-    public function productDataTable($product, $priceSort = null, $competitorId = null)
+    public function productDataTable($product, $priceSort = null, $competitorId = null, $isExport = false, $length = 10)
     {
         $competitors = Competitor::orderBy('id','DESC')->get();
-        $dataTable = DataTables::of($product);
+        
+        // For export, get all records without pagination
+        if ($isExport && $length == -1) {
+            $dataTable = DataTables::of($product->get());
+        } else {
+            $dataTable = DataTables::of($product);
+        }
 
         // Add category display column - matching category module status format
         $dataTable->addColumn('category_display', function ($product) {

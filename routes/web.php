@@ -138,7 +138,8 @@ Route::group(['middleware' => 'auth'], function () {
 
     Route::group(['prefix' => 'cron-jobs'], function () {
         Route::get('/', [CronJobController::class, 'index'])->name('cron-jobs.index');
-        Route::patch('/{job}/toggle-status', [CronJobController::class, 'toggleStatus'])->name('cron-jobs.toggle-status');
+        Route::patch('/{cronJob}/toggle-status', [CronJobController::class, 'toggleStatus'])->name('cron-jobs.toggle-status');
+        Route::post('/{cronJob}/update-schedule', [CronJobController::class, 'updateSchedule'])->name('cron-jobs.update-schedule');
     });
 
     // Component Routes

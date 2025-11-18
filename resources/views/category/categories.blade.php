@@ -21,12 +21,13 @@
                                 <span class="input-icon icon-left">
                                     <span data-feather="search"></span>
                                 </span>
-                                <span class="input-icon icon-right" onclick="clearSearch()" style="cursor: pointer;">
+                                <span class="input-icon cursor-pointer icon-right" onclick="clearSearch()">
                                     <i data-feather="x" class="text-muted"></i>
                                 </span>
-                                <input type="text" id="search" class="form-control form-control-default" 
-                                       placeholder="Search Categories" 
-                                       style="width: 300px;" maxlength="255" autocomplete="off">
+                                <input type="text" id="search" name="search" data-table="datatable"
+                                       autocomplete="off"
+                                       class="form-control form-control-solid w-250px ps-12 table_search"
+                                       placeholder="Search Categories">
                             </div>
                             @if(auth()->user()->isAdmin() || auth()->user()->hasPermission('category.create'))
                             <div class="action-btn">
@@ -122,15 +123,15 @@
 @endsection
 
 @section('scripts')
-    <script src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.1/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.3.3/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.3.3/js/buttons.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.3.3/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.3.3/js/buttons.print.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ asset('vendor_assets/js/datatables/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ asset('vendor_assets/js/datatables/dataTables.bootstrap5.min.js') }}"></script>
+    <script src="{{ asset('vendor_assets/js/datatables/dataTables.buttons.min.js') }}"></script>
+    <script src="{{ asset('vendor_assets/js/datatables/buttons.bootstrap5.min.js') }}"></script>
+    <script src="{{ asset('vendor_assets/js/datatables/buttons.html5.min.js') }}"></script>
+    <script src="{{ asset('vendor_assets/js/datatables/buttons.print.min.js') }}"></script>
+    <script src="{{ asset('vendor_assets/js/toastr/toastr.min.js') }}"></script>
+    <script src="{{ asset('vendor_assets/js/sweetalert2/sweetalert2.all.min.js') }}"></script>
+    <script src="{{ asset('vendor_assets/js/bootstrap/bootstrap.bundle.min.js') }}"></script>
     <script>
         $(document).ready(function() {
             function showPageLoading() {
@@ -385,3 +386,41 @@
         });
     </script>
 @endsection
+
+@push('styles')
+<style>
+.input-container {
+    position: relative;
+}
+
+.input-icon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+}
+
+.input-icon.icon-left {
+    left: 10px;
+}
+
+.input-icon.icon-right {
+    right: 10px;
+    cursor: pointer;
+}
+
+.form-control-solid {
+    padding-left: 35px;
+    padding-right: 35px;
+}
+
+.userDatatable-content small {
+    font-size: 0.75em;
+    color: #6c757d;
+}
+
+.dataTables_wrapper .dataTable tbody tr:hover {
+    background-color: #f8f9fa;
+}
+</style>
+@endpush

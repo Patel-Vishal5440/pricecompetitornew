@@ -636,7 +636,7 @@ class ProductController extends Controller
 
     /**
      * Import bulk products from CSV file
-     * CSV format: SKU (FOR US), Competitor URL 1, Competitor URL 2, ... (supports any competitors)
+     * CSV format: SKU, Category, Competitor URL 1, Competitor URL 2, ... (supports any competitors)
      * 
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -699,13 +699,14 @@ class ProductController extends Controller
                 
                 if (count($row) < 2) {
                     $results['failed']++;
-                    $results['errors'][] = "Row {$rowNumber}: Insufficient columns (expected: SKU, and at least one Competitor URL). Found: " . count($row) . " columns";
+                    $results['errors'][] = "Row {$rowNumber}: Insufficient columns (expected: SKU, Category, and at least one Competitor URL). Found: " . count($row) . " columns";
                     continue;
                 }
 
                 // Remove BOM from first column if present
                 $row[0] = preg_replace('/^\xEF\xBB\xBF/', '', $row[0]);
                 $sku = trim($row[0]);
+                $categoryName = isset($row[1]) ? trim($row[1]) : '';
                 
                 if (empty($sku)) {
                     $results['failed']++;
@@ -727,22 +728,39 @@ class ProductController extends Controller
 
                     $odooProduct = $response['result'][0];
 
-                    // Create or update product
-                    $product = Product::updateOrCreate(
-                        ['odoo_id' => $odooProduct['id']],
-                        [
-                            'name' => $odooProduct['name'] ?? null,
-                            'default_code' => $odooProduct['default_code'] ?? null,
-                            'list_price' => $odooProduct['list_price'] ?? 0,
-                            'barcode' => $odooProduct['barcode'] ?? null,
-                        ]
-                    );
-
+                    // Initialize error tracking
                     $urlsAdded = 0;
                     $rowErrors = [];
 
-                    // Process all URL columns (starting from index 1)
-                    for ($i = 1; $i < count($row); $i++) {
+                    // Prepare product data
+                    $productData = [
+                        'name' => $odooProduct['name'] ?? null,
+                        'default_code' => $odooProduct['default_code'] ?? null,
+                        'list_price' => $odooProduct['list_price'] ?? 0,
+                        'barcode' => $odooProduct['barcode'] ?? null,
+                    ];
+
+                    // Handle category assignment if provided
+                    if (!empty($categoryName)) {
+                        // Find category by name (case-insensitive)
+                        $category = Category::whereRaw('LOWER(name) = ?', [strtolower($categoryName)])->first();
+                        
+                        if ($category) {
+                            $productData['category_id'] = $category->id;
+                            $productData['category'] = $category->name;
+                        } else {
+                            $rowErrors[] = "Category '{$categoryName}' not found. Please create the category first before importing.";
+                        }
+                    }
+
+                    // Create or update product
+                    $product = Product::updateOrCreate(
+                        ['odoo_id' => $odooProduct['id']],
+                        $productData
+                    );
+
+                    // Process all URL columns (starting from index 2, after SKU and Category)
+                    for ($i = 2; $i < count($row); $i++) {
                         $url = trim($row[$i]);
                         
                         if (empty($url)) {
@@ -815,13 +833,20 @@ class ProductController extends Controller
                         }
                     }
 
-                    if ($urlsAdded > 0) {
+                    // Consider import successful if product was created/updated, even if no URLs were added
+                    // But mark as failed if there were critical errors (like category not found)
+                    $hasCriticalError = false;
+                    foreach ($rowErrors as $error) {
+                        if (stripos($error, 'category') !== false && stripos($error, 'not found') !== false) {
+                            $hasCriticalError = true;
+                            break;
+                        }
+                    }
+
+                    if (!$hasCriticalError) {
                         $results['success']++;
                     } else {
                         $results['failed']++;
-                        if (empty($rowErrors)) {
-                            $results['errors'][] = "Row {$rowNumber}: No valid URLs provided";
-                        }
                     }
                 } catch (\Exception $e) {
                     $results['failed']++;
@@ -899,7 +924,7 @@ class ProductController extends Controller
             
             // Get actual competitors from database for example
             $competitors = Competitor::limit(3)->get();
-            $header = ['SKU (FOR US)'];
+            $header = ['SKU (FOR US)', 'Category'];
             
             // Add competitor columns based on available competitors
             foreach ($competitors as $competitor) {
@@ -908,11 +933,18 @@ class ProductController extends Controller
             
             // If no competitors, use example columns
             if ($competitors->isEmpty()) {
-                $header = ['SKU (FOR US)', 'Competitor 1 URL', 'Competitor 2 URL'];
+                $header = ['SKU (FOR US)', 'Category', 'Competitor 1 URL', 'Competitor 2 URL'];
             }
             
             // Header row
             fputcsv($file, $header);
+            
+            // Get sample categories for example
+            $categories = Category::limit(2)->get();
+            $sampleCategories = $categories->pluck('name')->toArray();
+            if (empty($sampleCategories)) {
+                $sampleCategories = ['Electronics', 'Accessories'];
+            }
             
             // Sample data rows
             if (!$competitors->isEmpty()) {
@@ -925,11 +957,16 @@ class ProductController extends Controller
                         $urls[] = 'https://example.com/product/example1';
                     }
                 }
-                fputcsv($file, array_merge(['SKU001'], $urls));
+                // Add sample rows with different categories
+                fputcsv($file, array_merge(['SKU001', $sampleCategories[0] ?? 'Electronics'], $urls));
+                if (count($sampleCategories) > 1) {
+                    fputcsv($file, array_merge(['SKU002', $sampleCategories[1] ?? 'Accessories'], $urls));
+                }
             } else {
                 // Fallback example
                 fputcsv($file, [
                     'SKU001',
+                    $sampleCategories[0] ?? 'Electronics',
                     'https://competitor1.com/product/example1',
                     'https://competitor2.com/product/example1'
                 ]);

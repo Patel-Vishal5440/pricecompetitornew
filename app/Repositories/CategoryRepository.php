@@ -72,7 +72,7 @@ class CategoryRepository
             $deleteButton = '';
             
             if (auth()->user()->isAdmin() || auth()->user()->hasPermission('category.edit')) {
-                $editButton = '<button type="button" class="btn btn-link p-0 m-0 align-baseline mx-2 edit-category-btn" 
+                $editButton = '<button type="button" class="btn btn-link text-primary p-0 m-0 align-baseline mx-2 edit-category-btn" 
                     style="font-size:inherit;" 
                     data-id="' . $category->id . '" 
                     data-name="' . htmlspecialchars($category->name) . '" 

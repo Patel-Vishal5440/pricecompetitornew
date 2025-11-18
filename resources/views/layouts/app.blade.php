@@ -21,7 +21,7 @@
     {{-- Fonts --}}
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     {{-- SweetAlert2 CSS --}}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="{{ asset('vendor_assets/css/sweetalert2/sweetalert2.min.css') }}">
     {{-- Inject:css, Global Theme Styles (used by all pages) --}}
 
     @include('layouts.partials._styles')
@@ -66,7 +66,7 @@
     @yield('mapScript')
     @include('layouts.partials._scripts')
     {{-- SweetAlert2 JS --}}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+    <script src="{{ asset('vendor_assets/js/sweetalert2/sweetalert2.all.min.js') }}"></script>
     {{-- Includable JS --}}
     <script src="{{ mix('js/alpinejs.cdn.min.js') }}"></script>
     

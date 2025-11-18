@@ -72,14 +72,14 @@
 
 {{-- @push('scripts') --}}
 @section('scripts')
-    <script src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.1/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.3.3/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.3.3/js/buttons.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.3.3/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.3.3/js/buttons.print.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ asset('vendor_assets/js/datatables/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ asset('vendor_assets/js/datatables/dataTables.bootstrap5.min.js') }}"></script>
+    <script src="{{ asset('vendor_assets/js/datatables/dataTables.buttons.min.js') }}"></script>
+    <script src="{{ asset('vendor_assets/js/datatables/buttons.bootstrap5.min.js') }}"></script>
+    <script src="{{ asset('vendor_assets/js/datatables/buttons.html5.min.js') }}"></script>
+    <script src="{{ asset('vendor_assets/js/datatables/buttons.print.min.js') }}"></script>
+    <script src="{{ asset('vendor_assets/js/toastr/toastr.min.js') }}"></script>
+    <script src="{{ asset('vendor_assets/js/sweetalert2/sweetalert2.all.min.js') }}"></script>
     <script>
         $(document).ready(function() {
             toastr.options = {
@@ -220,5 +220,5 @@
             });
         });
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ asset('vendor_assets/js/bootstrap/bootstrap.bundle.min.js') }}"></script>
 @endsection

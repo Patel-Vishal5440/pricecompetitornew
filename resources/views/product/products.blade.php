@@ -78,6 +78,74 @@
             color: #000;
             text-shadow: 0 1px 0 #fff;
         }
+        /* Mobilenzo columns styling - bright blue background */
+        #datatable thead th.mobilenzo-column,
+        table.dataTable thead th.mobilenzo-column {
+            background-color: #0d6efd !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+        }
+        #datatable tbody td.mobilenzo-column,
+        table.dataTable tbody td.mobilenzo-column {
+            background-color: #cfe2ff !important;
+        }
+        /* Competitor columns styling - bright orange/amber background */
+        #datatable thead th.competitor-column,
+        table.dataTable thead th.competitor-column {
+            background-color: #fd7e14 !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+        }
+        #datatable tbody td.competitor-column,
+        table.dataTable tbody td.competitor-column {
+            background-color: #ffe5cc !important;
+        }
+        /* Ensure hover states work properly */
+        #datatable tbody tr:hover td.mobilenzo-column,
+        table.dataTable tbody tr:hover td.mobilenzo-column {
+            background-color: #b6d4fe !important;
+        }
+        #datatable tbody tr:hover td.competitor-column,
+        table.dataTable tbody tr:hover td.competitor-column {
+            background-color: #ffd9b3 !important;
+        }
+        /* Ensure even/odd row striping doesn't override our colors */
+        #datatable tbody tr.even td.mobilenzo-column,
+        #datatable tbody tr.odd td.mobilenzo-column,
+        table.dataTable tbody tr.even td.mobilenzo-column,
+        table.dataTable tbody tr.odd td.mobilenzo-column {
+            background-color: #cfe2ff !important;
+        }
+        #datatable tbody tr.even td.competitor-column,
+        #datatable tbody tr.odd td.competitor-column,
+        table.dataTable tbody tr.even td.competitor-column,
+        table.dataTable tbody tr.odd td.competitor-column {
+            background-color: #ffe5cc !important;
+        }
+        /* Add subtle border between sections for better visual separation */
+        #datatable thead th.mobilenzo-column:last-of-type,
+        #datatable tbody td.mobilenzo-column:last-of-type,
+        table.dataTable thead th.mobilenzo-column:last-of-type,
+        table.dataTable tbody td.mobilenzo-column:last-of-type {
+            border-right: 3px solid #0d6efd !important;
+        }
+        #datatable thead th.competitor-column:first-of-type,
+        #datatable tbody td.competitor-column:first-of-type,
+        table.dataTable thead th.competitor-column:first-of-type,
+        table.dataTable tbody td.competitor-column:first-of-type {
+            border-left: 3px solid #ffc107 !important;
+        }
+        /* Additional specificity for DataTables */
+        table.dataTable.display tbody tr td.mobilenzo-column,
+        table.dataTable.display tbody tr.odd td.mobilenzo-column,
+        table.dataTable.display tbody tr.even td.mobilenzo-column {
+            background-color: #cfe2ff !important;
+        }
+        table.dataTable.display tbody tr td.competitor-column,
+        table.dataTable.display tbody tr.odd td.competitor-column,
+        table.dataTable.display tbody tr.even td.competitor-column {
+            background-color: #ffe5cc !important;
+        }
     </style>
 @endsection
 
@@ -145,7 +213,7 @@
                             <!-- Price Comparison Filter -->
                             <div class="col-12 col-md-6 col-lg-2">
                                 <label class="form-label small text-muted mb-1">Price Comparison</label>
-                                <select id="filterPriceComparison" class="form-control form-control-solid" title="Select a competitor first to compare prices">
+                                <select id="filterPriceComparison" class="form-control form-control-solid" title="Compare your price with competitors (works with All Competitors or a specific competitor)">
                                     <option value="">All Prices</option>
                                     <option value="higher">Competitor Higher</option>
                                     <option value="lower">Competitor Lower</option>
@@ -165,8 +233,28 @@
                             <div class="col-12">
                                 <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #f8f9fb 0%, #ffffff 100%);">
                                     <div class="card-body py-2 px-3">
-                                        <div class="d-flex justify-content-end align-items-center">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap" style="gap: 1rem;">
+                                            <!-- Export Dropdown -->
+                                            
+                                            <!-- Import Buttons -->
                                             <div class="d-flex align-items-center" style="gap: 1rem;">
+                                                <div class="dropdown">
+                                                    <button type="button" class="btn btn-primary btn-sm shadow-sm dropdown-toggle" id="exportBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="fas fa-download me-1"></i> Export
+                                                    </button>
+                                                    <ul class="dropdown-menu" aria-labelledby="exportBtn">
+                                                        <li><h6 class="dropdown-header">Export Format</h6></li>
+                                                        <li><a class="dropdown-item" href="javascript:void(0)" id="exportCsv">
+                                                            <i class="fas fa-file-csv me-2 text-primary"></i> Export as CSV
+                                                        </a></li>
+                                                        <li><a class="dropdown-item" href="javascript:void(0)" id="exportExcel">
+                                                            <i class="fas fa-file-excel me-2 text-success"></i> Export as Excel
+                                                        </a></li>
+                                                        <li><a class="dropdown-item" href="javascript:void(0)" id="exportPdf">
+                                                            <i class="fas fa-file-pdf me-2 text-danger"></i> Export as PDF
+                                                        </a></li>
+                                                    </ul>
+                                                </div>
                                                 <button type="button" class="btn btn-success btn-sm shadow-sm action-btn" id="importPriceUpdateBtn">
                                                     <i class="fas fa-money-bill-wave me-1"></i> Import Price
                                                 </button>
@@ -185,15 +273,15 @@
                                     <thead>
                                         <tr class="userDatatable-header">
                                             {{-- <th class="text-center">Id</th> --}}
-                                            <th class="text-start">Product Name</th>
-                                            <th class="text-center">Sku</th>
-                                            <th class="text-center">Category</th>
-                                            <th class="text-center">Price</th>
-                                            <th class="text-center">Cost</th>
+                                            <th class="text-start mobilenzo-column">Product Name</th>
+                                            <th class="text-center mobilenzo-column">Sku</th>
+                                            <th class="text-center mobilenzo-column">Category</th>
+                                            <th class="text-center mobilenzo-column">Price</th>
+                                            <th class="text-center mobilenzo-column">Cost</th>
                                             @foreach ($competitors as $competitor)
-                                                <th class="text-center">{{ $competitor->shortname ?? $competitor->name }}</th>
+                                                <th class="text-center competitor-column">{{ $competitor->shortname ?? $competitor->name }}</th>
                                             @endforeach
-                                            <th class="text-center">Actions</th>
+                                            <th class="text-center mobilenzo-column">Actions</th>
                                         </tr>
                                     </thead>
                                 </table>
@@ -584,8 +672,9 @@
                     <i class="fas fa-info-circle me-3 mt-1"></i>
                     <div>
                         <strong class="d-block mb-1">CSV Format Required</strong>
-                        <small class="text-muted">Your CSV file should have the following columns: <strong>SKU (FOR US), Competitor URL 1, Competitor URL 2, ...</strong></small>
-                        <br><small class="text-muted mt-1 d-block">The first row should be the header row. First column must be SKU. Remaining columns can be any competitor URLs. The system will automatically match URLs to competitors based on domain. Products will be fetched from Odoo using the SKU.</small>
+                        <small class="text-muted">Your CSV file should have the following columns: <strong>SKU, Category, Competitor URL 1, Competitor URL 2, ...</strong></small>
+                        <br><small class="text-muted mt-1 d-block">The first row should be the header row. Columns must be in order: <strong>SKU</strong> (required), <strong>Category</strong> (optional - must exist in system), then any number of <strong>Competitor URLs</strong>. The system will automatically match URLs to competitors based on domain. Products will be fetched from Odoo using the SKU.</small>
+                        <br><small class="text-muted mt-2 d-block"><strong>Important:</strong> Categories must be created in the system before importing. If a category doesn't exist, the import will continue but the category won't be assigned to that product.</small>
                         <br><small class="text-muted mt-2 d-block">
                             <i class="fas fa-download me-1"></i>
                             <a href="{{ route('products.downloadBulkProductsSample') }}" class="sample-file-link" download>
@@ -636,13 +725,11 @@
 @endsection
 
 @section('scripts')
-<script src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.1/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.3.3/js/dataTables.buttons.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.3.3/js/buttons.bootstrap5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.3.3/js/buttons.html5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.3.3/js/buttons.print.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<script src="{{ asset('vendor_assets/js/datatables/jquery.dataTables.min.js') }}"></script>
+<script src="{{ asset('vendor_assets/js/datatables/dataTables.bootstrap5.min.js') }}"></script>
+<script src="{{ asset('vendor_assets/js/jspdf/jspdf.umd.min.js') }}"></script>
+<script src="{{ asset('vendor_assets/js/jspdf/jspdf-autotable.min.js') }}"></script>
+<script src="{{ asset('vendor_assets/js/toastr/toastr.min.js') }}"></script>
 <script>
 $(document).ready(function() {
     function showPageLoading() {
@@ -680,12 +767,12 @@ $(document).ready(function() {
         },
         columns: [
             // { data: 'odoo_id', name: 'id', className: 'text-center', width: '60px' },
-            { data: 'name', name: 'name', className: 'text-start', width: '250px' },
-            { data: 'default_code', name: 'default_code', className: 'text-center', width: '120px' },
+            { data: 'name', name: 'name', className: 'text-start mobilenzo-column', width: '250px' },
+            { data: 'default_code', name: 'default_code', className: 'text-center mobilenzo-column', width: '120px' },
             {
                 data: 'category_display',
                 name: 'category_display',
-                className: 'text-center',
+                className: 'text-center mobilenzo-column',
                 width: '150px',
                 render: function(data, type, row) {
                     // Return HTML as-is from server (already formatted as rectangle)
@@ -695,7 +782,7 @@ $(document).ready(function() {
             {
                 data: 'list_price',
                 name: 'list_price',
-                className: 'text-center',
+                className: 'text-center mobilenzo-column',
                 render: function(data, type, row) {
                     // Format price with proper number formatting
                     const ourPrice = parseFloat(data) || 0;
@@ -747,7 +834,7 @@ $(document).ready(function() {
             {
                 data: 'cost',
                 name: 'cost',
-                className: 'text-center',
+                className: 'text-center mobilenzo-column',
                 render: function(data, type, row) {
                     // Format cost with proper number formatting
                     const cost = parseFloat(data) || 0;
@@ -759,7 +846,7 @@ $(document).ready(function() {
             {
                 data: 'competitor_link_{{ $competitor->id }}',
                 name: 'competitor_link_{{ $competitor->id }}',
-                className: 'text-center',
+                className: 'text-center competitor-column',
                 render: function(data, type, row) {
                     const competitorLink = data || '';
                     const competitorPrice = parseFloat(row.competitor_price_{{ $competitor->id }}) || 0;
@@ -787,7 +874,7 @@ $(document).ready(function() {
             {
                 data: 'action',
                 name: 'action',
-                className: 'text-center',
+                className: 'text-center mobilenzo-column',
                 searchable: false,
                 width: '60px'
             },
@@ -823,12 +910,7 @@ $(document).ready(function() {
     });
 
     $('#filterPriceComparison').on('change', function() {
-        var competitorId = $('#filterCompetitor').val();
-        if ($(this).val() && !competitorId) {
-            toastr.warning('Please select a competitor first to compare prices');
-            $(this).val('');
-            return;
-        }
+        // Price comparison now works with "All Competitors" or a specific competitor
         table.ajax.reload();
     });
 
@@ -837,6 +919,259 @@ $(document).ready(function() {
         $('#search').val('');
         table.ajax.reload();
     };
+
+    // Export functionality - fetch all data and export
+    function getExportData(callback) {
+        showPageLoading();
+        // Get current filter values
+        var filters = {
+            searchData: $('#search').val(),
+            category: $('#filterCategory').val(),
+            competitor_id: $('#filterCompetitor').val(),
+            price_sort: $('#filterPriceSort').val(),
+            price_comparison: $('#filterPriceComparison').val(),
+            _token: "{{ csrf_token() }}",
+            export: true,
+            length: -1 // Get all records
+        };
+        
+        $.ajax({
+            url: "{{ route('products.list') }}",
+            type: 'GET',
+            data: filters,
+            success: function(response) {
+                hidePageLoading();
+                if (response.data && response.data.length > 0) {
+                    callback(response.data);
+                } else {
+                    toastr.warning('No data to export');
+                }
+            },
+            error: function() {
+                hidePageLoading();
+                toastr.error('Failed to fetch data for export');
+            }
+        });
+    }
+
+    function stripHtml(html) {
+        if (!html) return '';
+        var tmp = document.createElement('DIV');
+        tmp.innerHTML = html;
+        return tmp.textContent || tmp.innerText || '';
+    }
+
+    function exportToCsv(data) {
+        var csv = [];
+        var headers = ['Product Name', 'SKU', 'Category', 'Price', 'Cost'];
+        
+        // Add competitor columns
+        @foreach ($competitors as $competitor)
+        headers.push('{{ $competitor->shortname ?? $competitor->name }}');
+        @endforeach
+        
+        csv.push(headers.join(','));
+        
+        data.forEach(function(row) {
+            var values = [
+                '"' + (row.name || '').replace(/"/g, '""') + '"',
+                '"' + (row.default_code || '').replace(/"/g, '""') + '"',
+                '"' + stripHtml(row.category_display || '').replace(/"/g, '""') + '"',
+                row.list_price || '0.00',
+                row.cost || '0.00'
+            ];
+            
+            @foreach ($competitors as $competitor)
+            values.push(row.competitor_price_{{ $competitor->id }} || '0.00');
+            @endforeach
+            
+            csv.push(values.join(','));
+        });
+        
+        var csvContent = csv.join('\n');
+        var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        var link = document.createElement('a');
+        var url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'products_' + new Date().toISOString().split('T')[0] + '.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function exportToExcel(data) {
+        // For Excel, we'll use CSV format which Excel can open
+        // Or we can use a library like SheetJS if needed
+        var csv = [];
+        var headers = ['Product Name', 'SKU', 'Category', 'Price', 'Cost'];
+        
+        @foreach ($competitors as $competitor)
+        headers.push('{{ $competitor->shortname ?? $competitor->name }}');
+        @endforeach
+        
+        csv.push(headers.join('\t'));
+        
+        data.forEach(function(row) {
+            var values = [
+                row.name || '',
+                row.default_code || '',
+                stripHtml(row.category_display || ''),
+                row.list_price || '0.00',
+                row.cost || '0.00'
+            ];
+            
+            @foreach ($competitors as $competitor)
+            values.push(row.competitor_price_{{ $competitor->id }} || '0.00');
+            @endforeach
+            
+            csv.push(values.join('\t'));
+        });
+        
+        var csvContent = csv.join('\n');
+        var blob = new Blob([csvContent], { type: 'application/vnd.ms-excel' });
+        var link = document.createElement('a');
+        var url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'products_' + new Date().toISOString().split('T')[0] + '.xls');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function exportToPdf(data) {
+        try {
+            // Check if jsPDF is available - UMD version exports to window.jspdf
+            let jsPDF;
+            if (typeof window.jspdf !== 'undefined') {
+                // UMD version
+                jsPDF = window.jspdf.jsPDF;
+            } else if (typeof window.jsPDF !== 'undefined') {
+                // Global version
+                jsPDF = window.jsPDF;
+            } else {
+                toastr.error('PDF library not loaded. Please refresh the page and try again.');
+                return;
+            }
+            
+            // Create PDF in landscape orientation
+            const doc = new jsPDF('landscape', 'mm', 'a4');
+
+            // Prepare table data
+            var headers = [['Product Name', 'SKU', 'Category', 'Price', 'Cost']];
+            
+            @foreach ($competitors as $competitor)
+            headers[0].push('{{ $competitor->shortname ?? $competitor->name }}');
+            @endforeach
+
+            var tableData = [];
+            data.forEach(function(row) {
+                var rowData = [
+                    (row.name || '').substring(0, 30), // Limit length
+                    row.default_code || '',
+                    stripHtml(row.category_display || '').substring(0, 20),
+                    '$' + (parseFloat(row.list_price) || 0).toFixed(2),
+                    '$' + (parseFloat(row.cost) || 0).toFixed(2)
+                ];
+                
+                @foreach ($competitors as $competitor)
+                rowData.push('$' + (parseFloat(row.competitor_price_{{ $competitor->id }}) || 0).toFixed(2));
+                @endforeach
+                
+                tableData.push(rowData);
+            });
+
+            // Add title (centered)
+            const pageWidth = doc.internal.pageSize.getWidth();
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            const titleText = 'Products Export';
+            const titleWidth = doc.getTextWidth(titleText);
+            doc.text(titleText, (pageWidth - titleWidth) / 2, 15);
+            
+            // Add date (centered)
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            const dateText = 'Generated: ' + new Date().toLocaleDateString();
+            const dateWidth = doc.getTextWidth(dateText);
+            doc.text(dateText, (pageWidth - dateWidth) / 2, 22);
+
+            // Add table using autoTable if available, otherwise use manual table
+            if (typeof doc.autoTable !== 'undefined') {
+                doc.autoTable({
+                    head: headers,
+                    body: tableData,
+                    startY: 28,
+                    styles: { fontSize: 7, cellPadding: 2 },
+                    headStyles: { fillColor: [66, 139, 202], textColor: 255, fontStyle: 'bold' },
+                    alternateRowStyles: { fillColor: [245, 245, 245] },
+                    margin: { top: 28, left: 14, right: 14 },
+                    tableWidth: 'wrap'
+                });
+            } else {
+                // Manual table creation without autoTable
+                doc.setFontSize(8);
+                var y = 28;
+                var colWidth = 35;
+                var startX = 14;
+                
+                // Draw header background
+                doc.setFillColor(66, 139, 202);
+                doc.rect(startX, y - 5, colWidth * headers[0].length, 6, 'F');
+                
+                // Header text
+                doc.setTextColor(255, 255, 255);
+                doc.setFont(undefined, 'bold');
+                headers[0].forEach(function(header, i) {
+                    doc.text(header.substring(0, 12), startX + (i * colWidth) + 2, y);
+                });
+                
+                // Data rows
+                doc.setTextColor(0, 0, 0);
+                doc.setFont(undefined, 'normal');
+                y += 8;
+                tableData.forEach(function(row, rowIndex) {
+                    // Alternate row background
+                    if (rowIndex % 2 === 0) {
+                        doc.setFillColor(245, 245, 245);
+                        doc.rect(startX, y - 4, colWidth * row.length, 5, 'F');
+                    }
+                    
+                    row.forEach(function(cell, i) {
+                        doc.text(cell.toString().substring(0, 12), startX + (i * colWidth) + 2, y);
+                    });
+                    y += 6;
+                    
+                    if (y > 190) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                });
+            }
+
+            // Save PDF
+            var filename = 'products_' + new Date().toISOString().split('T')[0] + '.pdf';
+            doc.save(filename);
+            toastr.success('PDF exported successfully!');
+        } catch (error) {
+            console.error('PDF export error:', error);
+            toastr.error('Failed to generate PDF. Please try again.');
+        }
+    }
+
+    // Export button handlers
+    $('#exportCsv').on('click', function() {
+        getExportData(exportToCsv);
+    });
+
+    $('#exportExcel').on('click', function() {
+        getExportData(exportToExcel);
+    });
+
+    $('#exportPdf').on('click', function() {
+        getExportData(exportToPdf);
+    });
 
     // Add Product Modal
     $(document).on('click', '#addProductBtn', function() {
@@ -1765,5 +2100,5 @@ $(document).ready(function() {
         });
     });
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ asset('vendor_assets/js/bootstrap/bootstrap.bundle.min.js') }}"></script>
 @endsection
