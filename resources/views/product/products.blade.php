@@ -1890,11 +1890,69 @@ $(document).ready(function() {
                 hidePageLoading();
                 $btn.prop('disabled', false).html('Import Prices');
                 
-                let errorMessage = 'Import failed';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
+                let errorMessage = 'Failed to import prices';
+                
+                if (xhr.responseJSON) {
+                    if (xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    } else if (xhr.responseJSON.errors) {
+                        const errors = xhr.responseJSON.errors;
+                        const errorList = [];
+                        for (let field in errors) {
+                            if (Array.isArray(errors[field])) {
+                                errorList.push(...errors[field]);
+                            } else {
+                                errorList.push(errors[field]);
+                            }
+                        }
+                        errorMessage = errorList.length > 0 ? errorList.join(', ') : errorMessage;
+                    }
+                } else if (xhr.responseText) {
+                    try {
+                        const errorData = JSON.parse(xhr.responseText);
+                        errorMessage = errorData.message || errorMessage;
+                    } catch(e) {
+                        if (xhr.status === 0) {
+                            errorMessage = 'Network error. Please check your connection and try again.';
+                        } else if (xhr.status === 404) {
+                            errorMessage = 'Import endpoint not found. Please refresh the page and try again.';
+                        } else if (xhr.status === 500) {
+                            const responseText = xhr.responseText || '';
+                            if (responseText.includes('message') || responseText.includes('error')) {
+                                errorMessage = 'Server error occurred. Please check the file format and try again.';
+                            } else {
+                                errorMessage = 'Server error occurred. Please try again later.';
+                            }
+                        } else if (xhr.status === 422) {
+                            errorMessage = 'Validation error. Please check your file format and try again.';
+                        } else if (xhr.status === 413) {
+                            errorMessage = 'File size too large. Maximum file size is 10MB.';
+                        } else if (xhr.status === 415) {
+                            errorMessage = 'Invalid file type. Please upload a CSV or TXT file.';
+                        } else if (xhr.status >= 400 && xhr.status < 500) {
+                            errorMessage = 'Request error. Please check your file and try again.';
+                        } else {
+                            errorMessage = 'An error occurred while importing. Please try again.';
+                        }
+                    }
+                } else {
+                    if (xhr.status === 0) {
+                        errorMessage = 'Network error. Please check your connection and try again.';
+                    } else if (xhr.status >= 500) {
+                        errorMessage = 'Server error occurred. Please try again later.';
+                    } else if (xhr.status === 422) {
+                        errorMessage = 'Validation error. Please check your file format and try again.';
+                    } else if (xhr.status === 413) {
+                        errorMessage = 'File size too large. Maximum file size is 10MB.';
+                    } else if (xhr.status === 415) {
+                        errorMessage = 'Invalid file type. Please upload a CSV or TXT file.';
+                    }
                 }
+                
                 toastr.error(errorMessage);
+                
+                $('#priceUpdateResultsContent').html('<div class="alert alert-danger d-flex align-items-center" style="border-left: 4px solid #dc3545;"><i class="fas fa-exclamation-circle me-2" style="font-size: 1.2rem;"></i><div><strong>Error:</strong> ' + errorMessage + '</div></div>');
+                $('#priceUpdateImportResults').show();
             }
         });
     });

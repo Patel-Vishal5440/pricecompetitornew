@@ -515,13 +515,35 @@ class ProductController extends Controller
      */
     public function importPriceUpdate(Request $request)
     {
-        $request->validate([
-            'file' => 'required|file|mimes:csv,txt|max:10240' // 10MB max
-        ]);
-
         try {
+            $validator = Validator::make($request->all(), [
+                'file' => 'required|file|mimes:csv,txt|max:10240'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed: ' . implode(', ', $validator->errors()->all())
+                ], 422);
+            }
+
             $file = $request->file('file');
+            
+            if (!$file || !$file->isValid()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid file uploaded'
+                ], 400);
+            }
+
             $path = $file->getRealPath();
+            
+            if (!file_exists($path) || !is_readable($path)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'File cannot be read. Please check file permissions.'
+                ], 400);
+            }
             
             $results = [
                 'success' => 0,
@@ -529,12 +551,11 @@ class ProductController extends Controller
                 'errors' => []
             ];
 
-            // Read CSV file
             $handle = fopen($path, 'r');
             if ($handle === false) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to read CSV file'
+                    'message' => 'Failed to open CSV file. Please ensure the file is a valid CSV format.'
                 ], 400);
             }
 
@@ -622,14 +643,30 @@ class ProductController extends Controller
                 'results' => $results
             ]);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $errors = $e->validator->errors()->all();
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error: ' . implode(', ', $errors)
+            ], 422);
         } catch (\Exception $e) {
             Log::error('Import Price Update Error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+            
+            $errorMessage = 'Failed to import prices';
+            if (strpos($e->getMessage(), 'file') !== false) {
+                $errorMessage = 'File processing error: ' . $e->getMessage();
+            } elseif (strpos($e->getMessage(), 'database') !== false || strpos($e->getMessage(), 'SQL') !== false) {
+                $errorMessage = 'Database error occurred. Please try again later.';
+            } elseif (strpos($e->getMessage(), 'connection') !== false || strpos($e->getMessage(), 'timeout') !== false) {
+                $errorMessage = 'Connection error. Please check your network and try again.';
+            }
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Import failed: ' . $e->getMessage()
+                'message' => $errorMessage
             ], 500);
         }
     }
