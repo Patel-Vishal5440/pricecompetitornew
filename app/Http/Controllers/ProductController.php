@@ -334,6 +334,94 @@ class ProductController extends Controller
         return response()->json(['success' => false, 'message' => 'Failed to sync product'], 404);
     }
 
+    public function bulkSyncPricing(Request $request)
+    {
+        $validated = $request->validate([
+            'product_ids' => 'required|array|min:1',
+            'product_ids.*' => 'integer|exists:products,id',
+        ]);
+
+        $products = Product::with('competitorPrices')->whereIn('id', $validated['product_ids'])->get();
+
+        $sourceUpdated = 0;
+        $competitorUpdated = 0;
+        $failed = 0;
+
+        foreach ($products as $product) {
+            try {
+                if ($product->odoo_id && !$this->isManualProduct($product->odoo_id)) {
+                    $sourceResponse = $this->odooService->fetchSpecificProduct($product->odoo_id);
+                    if (isset($sourceResponse['result'][0])) {
+                        $sourceProduct = $sourceResponse['result'][0];
+                        $product->update([
+                            'name' => $sourceProduct['name'] ?? $product->name,
+                            'default_code' => $sourceProduct['default_code'] ?? $product->default_code,
+                            'list_price' => $sourceProduct['list_price'] ?? $product->list_price,
+                            'cost' => $sourceProduct['standard_price'] ?? $product->cost,
+                            'barcode' => $sourceProduct['barcode'] ?? $product->barcode,
+                        ]);
+                        $sourceUpdated++;
+                    }
+                }
+
+                foreach ($product->competitorPrices as $competitorPrice) {
+                    if (empty($competitorPrice->competitor_url)) {
+                        continue;
+                    }
+
+                    try {
+                        $price = $this->scrapeCompetitorPrice($competitorPrice->competitor_url);
+                        if ($price !== null) {
+                            $competitorPrice->update(['price' => $price]);
+                            $competitorUpdated++;
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning('Bulk competitor pricing sync failed', [
+                            'product_id' => $product->id,
+                            'competitor_id' => $competitorPrice->competitor_id,
+                            'url' => $competitorPrice->competitor_url,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            } catch (\Exception $e) {
+                $failed++;
+                Log::warning('Bulk pricing sync failed for product', [
+                    'product_id' => $product->id,
+                    'odoo_id' => $product->odoo_id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Bulk pricing sync completed.',
+            'summary' => [
+                'products_processed' => $products->count(),
+                'source_updated' => $sourceUpdated,
+                'competitor_prices_updated' => $competitorUpdated,
+                'failed_products' => $failed,
+            ],
+        ]);
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        $validated = $request->validate([
+            'product_ids' => 'required|array|min:1',
+            'product_ids.*' => 'integer|exists:products,id',
+        ]);
+
+        $deletedCount = Product::whereIn('id', $validated['product_ids'])->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Deleted {$deletedCount} product(s) successfully.",
+            'deleted_count' => $deletedCount,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

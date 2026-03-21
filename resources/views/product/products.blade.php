@@ -146,6 +146,27 @@
         table.dataTable.display tbody tr.even td.competitor-column {
             background-color: #ffe5cc !important;
         }
+
+        /* Keep toolbar buttons visually consistent and readable */
+        .toolbar-btn {
+            min-width: 122px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            white-space: nowrap;
+            margin-right: 0.5rem;
+        }
+        .toolbar-btn:last-child { margin-right: 0; }
+
+        .toolbar-row {
+            margin-top: 0.75rem;
+        }
+
+        .toolbar-inner {
+            padding-top: 0.4rem;
+        }
     </style>
 @endsection
 
@@ -158,25 +179,42 @@
                     <div class="card-body p-3">
                         <!-- Filter and Action Bar -->
                         <div class="row g-3 align-items-end mb-3">
-                            <!-- Search Column -->
-                            <div class="col-12 col-md-6 col-lg-2">
-                                <label class="form-label small text-muted mb-1">Search Product</label>
+                            <!-- Name Filter -->
+                            <div class="col-12 col-md-6 col-lg-4 col-xl-2">
+                                <label class="form-label small text-muted mb-1">Name</label>
                                 <div class="input-container icon-left icon-right position-relative">
                                     <span class="input-icon icon-left">
                                         <span data-feather="search"></span>
                                     </span>
-                                    <span class="input-icon icon-right" onclick="clearSearch()" style="cursor: pointer;">
+                                    <span class="input-icon icon-right" onclick="clearNameFilter()" style="cursor: pointer;">
                                         <i data-feather="x" class="text-muted"></i>
                                     </span>
-                                    <input type="text" id="search" name="search" data-table="datatable"
+                                    <input type="text" id="filterName" name="filter_name" data-table="datatable"
                                         autocomplete="off"
                                         class="form-control form-control-solid ps-12 pe-12 table_search"
-                                        placeholder="Search by name or SKU">
+                                        placeholder="Search by name">
+                                </div>
+                            </div>
+
+                            <!-- SKU Filter -->
+                            <div class="col-12 col-md-6 col-lg-4 col-xl-2">
+                                <label class="form-label small text-muted mb-1">SKU</label>
+                                <div class="input-container icon-left icon-right position-relative">
+                                    <span class="input-icon icon-left">
+                                        <span data-feather="search"></span>
+                                    </span>
+                                    <span class="input-icon icon-right" onclick="clearSkuFilter()" style="cursor: pointer;">
+                                        <i data-feather="x" class="text-muted"></i>
+                                    </span>
+                                    <input type="text" id="filterSku" name="filter_sku" data-table="datatable"
+                                        autocomplete="off"
+                                        class="form-control form-control-solid ps-12 pe-12 table_search"
+                                        placeholder="Search by SKU">
                                 </div>
                             </div>
                             
                             <!-- Category Filter -->
-                            <div class="col-12 col-md-6 col-lg-2">
+                            <div class="col-12 col-md-6 col-lg-4 col-xl-2">
                                 <label class="form-label small text-muted mb-1">Category</label>
                                 <select id="filterCategory" class="form-control form-control-solid">
                                     <option value="">All Categories</option>
@@ -190,7 +228,7 @@
                             </div>
                             
                             <!-- Competitor Filter -->
-                            <div class="col-12 col-md-6 col-lg-2">
+                            <div class="col-12 col-md-6 col-lg-4 col-xl-2">
                                 <label class="form-label small text-muted mb-1">Competitor</label>
                                 <select id="filterCompetitor" class="form-control form-control-solid">
                                     <option value="">All Competitors</option>
@@ -200,69 +238,92 @@
                                 </select>
                             </div>
                             
-                            <!-- Price Sort Filter -->
-                            <div class="col-12 col-md-6 col-lg-2">
-                                <label class="form-label small text-muted mb-1">Sort Price</label>
+                            <!-- Competitor Price Sort Filter -->
+                            <div class="col-12 col-md-6 col-lg-4 col-xl-2">
+                                <label class="form-label small text-muted mb-1">Sort Competitor Price</label>
                                 <select id="filterPriceSort" class="form-control form-control-solid" title="Select a competitor first to sort by price">
                                     <option value="">Sort by Price</option>
                                     <option value="low_to_high">Price: Low to High</option>
                                     <option value="high_to_low">Price: High to Low</option>
                                 </select>
                             </div>
-                            
-                            <!-- Price Comparison Filter -->
-                            <div class="col-12 col-md-6 col-lg-2">
-                                <label class="form-label small text-muted mb-1">Price Comparison</label>
-                                <select id="filterPriceComparison" class="form-control form-control-solid" title="Compare your price with competitors (works with All Competitors or a specific competitor)">
-                                    <option value="">All Prices</option>
-                                    <option value="higher">Competitor Higher</option>
-                                    <option value="lower">Competitor Lower</option>
+
+                            <!-- Product Price Sort Filter -->
+                            <div class="col-12 col-md-6 col-lg-4 col-xl-2">
+                                <label class="form-label small text-muted mb-1">Sort Product Price</label>
+                                <select id="filterProductPriceSort" class="form-control form-control-solid">
+                                    <option value="">Sort by Product Price</option>
+                                    <option value="low_to_high">Price: Low to High</option>
+                                    <option value="high_to_low">Price: High to Low</option>
                                 </select>
                             </div>
-                            
-                            <!-- Add Product Button -->
-                            <div class="col-12 col-md-6 col-lg-2 d-flex align-items-end justify-content-end">
-                                <button type="button" class="btn btn-primary btn-sm action-btn" id="addProductBtn">
-                                     Add Product
-                                </button>
-                            </div>
+
                         </div>
                         
-                        <!-- Import/Export Buttons Row -->
+                        <!-- Row 2: Action Controls -->
+                        <div class="row mb-2 toolbar-row">
+                            <div class="col-12">
+                                <div class="d-flex align-items-center flex-wrap gap-3 p-2 toolbar-inner">
+                                    <div class="d-flex align-items-center flex-wrap gap-3">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <label class="form-label small text-muted mb-0">Price Comparison</label>
+                                            <select id="filterPriceComparison" class="form-control form-control-solid" style="min-width: 180px;" title="Compare your price with competitors (works with All Competitors or a specific competitor)">
+                                                <option value="">All Prices</option>
+                                                <option value="higher">Competitor Higher</option>
+                                                <option value="lower">Competitor Lower</option>
+                                            </select>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm action-btn toolbar-btn" id="resetFiltersBtn" title="Clear all filters">
+                                            Reset Filters
+                                        </button>
+                                    </div>
+
+                                    <div class="d-flex align-items-center flex-wrap gap-3 ms-auto">
+                                        <button type="button" class="btn btn-primary btn-sm action-btn toolbar-btn" id="addProductBtn">
+                                            Add Product
+                                        </button>
+                                        <div class="dropdown">
+                                            <button type="button" class="btn btn-primary btn-sm shadow-sm dropdown-toggle toolbar-btn" id="exportBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-download me-1"></i> Export
+                                            </button>
+                                            <ul class="dropdown-menu" aria-labelledby="exportBtn">
+                                                <li><h6 class="dropdown-header">Export Format</h6></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0)" id="exportCsv">
+                                                    <i class="fas fa-file-csv me-2 text-primary"></i> Export as CSV
+                                                </a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0)" id="exportExcel">
+                                                    <i class="fas fa-file-excel me-2 text-success"></i> Export as Excel
+                                                </a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0)" id="exportPdf">
+                                                    <i class="fas fa-file-pdf me-2 text-danger"></i> Export as PDF
+                                                </a></li>
+                                            </ul>
+                                        </div>
+                                        <button type="button" class="btn btn-success btn-sm shadow-sm action-btn toolbar-btn" id="importPriceUpdateBtn">
+                                            <i class="fas fa-money-bill-wave me-1"></i> Import Price
+                                        </button>
+                                        <button type="button" class="btn btn-info btn-sm text-white shadow-sm action-btn toolbar-btn" id="importBulkProductsBtn">
+                                            <i class="fas fa-file-csv me-1"></i> Import Bulk Products
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Bulk Actions -->
                         <div class="row mb-4">
                             <div class="col-12">
-                                <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #f8f9fb 0%, #ffffff 100%);">
-                                    <div class="card-body py-2 px-3">
-                                        <div class="d-flex justify-content-between align-items-center flex-wrap" style="gap: 1rem;">
-                                            <!-- Export Dropdown -->
-                                            
-                                            <!-- Import Buttons -->
-                                            <div class="d-flex align-items-center" style="gap: 1rem;">
-                                                <div class="dropdown">
-                                                    <button type="button" class="btn btn-primary btn-sm shadow-sm dropdown-toggle" id="exportBtn" data-bs-toggle="dropdown" aria-expanded="false">
-                                                        <i class="fas fa-download me-1"></i> Export
-                                                    </button>
-                                                    <ul class="dropdown-menu" aria-labelledby="exportBtn">
-                                                        <li><h6 class="dropdown-header">Export Format</h6></li>
-                                                        <li><a class="dropdown-item" href="javascript:void(0)" id="exportCsv">
-                                                            <i class="fas fa-file-csv me-2 text-primary"></i> Export as CSV
-                                                        </a></li>
-                                                        <li><a class="dropdown-item" href="javascript:void(0)" id="exportExcel">
-                                                            <i class="fas fa-file-excel me-2 text-success"></i> Export as Excel
-                                                        </a></li>
-                                                        <li><a class="dropdown-item" href="javascript:void(0)" id="exportPdf">
-                                                            <i class="fas fa-file-pdf me-2 text-danger"></i> Export as PDF
-                                                        </a></li>
-                                                    </ul>
-                                                </div>
-                                                <button type="button" class="btn btn-success btn-sm shadow-sm action-btn" id="importPriceUpdateBtn">
-                                                    <i class="fas fa-money-bill-wave me-1"></i> Import Price
-                                                </button>
-                                                <button type="button" class="btn btn-info btn-sm text-white shadow-sm action-btn" id="importBulkProductsBtn">
-                                                    <i class="fas fa-file-csv me-1"></i> Import Bulk Products
-                                                </button>
-                                            </div>
-                                        </div>
+                                <div class="d-flex justify-content-end p-2">
+                                    <div id="bulkActionBar" class="d-flex align-items-center flex-wrap" style="display:none; gap:.75rem;">
+                                        <button type="button" class="btn btn-primary btn-sm toolbar-btn" id="bulkSyncPricingBtn">
+                                            <i class="fas fa-sync me-1"></i> Get Pricing
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-sm toolbar-btn" id="bulkDeleteBtn">
+                                            <i class="fas fa-trash-alt me-1"></i> Delete
+                                        </button>
+                                        <button type="button" class="btn btn-light btn-sm toolbar-btn" id="clearBulkSelectionBtn">
+                                            Clear Selection
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -272,6 +333,9 @@
                                 <table id="datatable" class="table mb-0 datatable">
                                     <thead>
                                         <tr class="userDatatable-header">
+                                            <th class="text-center mobilenzo-column" style="width: 40px;">
+                                                <input type="checkbox" id="selectAllProducts" class="form-check-input">
+                                            </th>
                                             {{-- <th class="text-center">Id</th> --}}
                                             <th class="text-start mobilenzo-column">Product Name</th>
                                             <th class="text-center mobilenzo-column">Sku</th>
@@ -729,6 +793,7 @@
 <script src="{{ asset('vendor_assets/js/datatables/dataTables.bootstrap5.min.js') }}"></script>
 <script src="{{ asset('vendor_assets/js/jspdf/jspdf.umd.min.js') }}"></script>
 <script src="{{ asset('vendor_assets/js/jspdf/jspdf-autotable.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="{{ asset('vendor_assets/js/toastr/toastr.min.js') }}"></script>
 <script>
 $(document).ready(function() {
@@ -738,12 +803,67 @@ $(document).ready(function() {
     function hidePageLoading() {
         document.getElementById("loadingIndicator").style.display = "none";
     }
+
+    let selectedProductIds = new Set();
+
+    function updateBulkActionBar() {
+        const count = selectedProductIds.size;
+        $('#selectedProductsCount').text(count);
+        if (count > 0) {
+            $('#bulkActionBar').show();
+        } else {
+            $('#bulkActionBar').hide();
+        }
+    }
+
+    function syncSelectAllState() {
+        const visibleCheckboxes = $('.row-product-checkbox');
+        if (!visibleCheckboxes.length) {
+            $('#selectAllProducts').prop('checked', false).prop('indeterminate', false);
+            return;
+        }
+
+        const checkedVisible = visibleCheckboxes.filter(':checked').length;
+        const allVisibleChecked = checkedVisible === visibleCheckboxes.length;
+        const hasSomeChecked = checkedVisible > 0 && !allVisibleChecked;
+
+        $('#selectAllProducts')
+            .prop('checked', allVisibleChecked)
+            .prop('indeterminate', hasSomeChecked);
+    }
+
+    function getSelectedProductIds() {
+        return Array.from(selectedProductIds).map(function(id) {
+            return Number(id);
+        });
+    }
+
+    function reloadPageAfterSuccessToast(delayMs = 1200) {
+        setTimeout(function() {
+            window.location.reload();
+        }, delayMs);
+    }
+
+    function updateProductCountInfo(tableApi) {
+        var info = tableApi.page.info();
+        var onCurrentPage = Math.max(0, info.end - info.start);
+        var filteredCount = info.recordsDisplay || 0;
+        var totalCount = info.recordsTotal || 0;
+
+        var countText = 'On this page: <strong>' + onCurrentPage + '</strong> | Total: <strong>' + totalCount + '</strong>';
+        if (filteredCount !== totalCount) {
+            countText = 'On this page: <strong>' + onCurrentPage + '</strong> | Filtered: <strong>' + filteredCount + '</strong> | Total: <strong>' + totalCount + '</strong>';
+        }
+
+        $('.product-table-count-info').html(countText);
+    }
+
     let table = $('#datatable').DataTable({
         processing: true,
         serverSide: true,
         searching: false,
         ordering: false,
-        dom: 'rt<"bottom"lp><"clear">',
+        dom: 'rt<"bottom d-flex justify-content-between align-items-center flex-wrap gap-2"l<"product-table-count-info text-center flex-grow-1 small fw-semibold text-primary">p><"clear">',
         language: {
             emptyTable: `<div class="py-4 text-center text-muted">
                 <i class="fas fa-box-open fa-2x mb-2"></i><br>
@@ -754,10 +874,12 @@ $(document).ready(function() {
             url: "{{ route('products.list') }}",
             data: function(data) {
                 hidePageLoading();
-                data.searchData = $('#search').val();
+                data.filter_name = $('#filterName').val();
+                data.filter_sku = $('#filterSku').val();
                 data.category = $('#filterCategory').val();
                 data.competitor_id = $('#filterCompetitor').val();
                 data.price_sort = $('#filterPriceSort').val();
+                data.product_price_sort = $('#filterProductPriceSort').val();
                 data.price_comparison = $('#filterPriceComparison').val();
             },
             complete: function() {
@@ -765,7 +887,26 @@ $(document).ready(function() {
                 $('[data-bs-toggle="tooltip"]').tooltip();
             }
         },
+        drawCallback: function() {
+            $('.row-product-checkbox').each(function() {
+                const id = $(this).data('product-id');
+                $(this).prop('checked', selectedProductIds.has(String(id)));
+            });
+            syncSelectAllState();
+            updateBulkActionBar();
+            updateProductCountInfo(this.api());
+        },
         columns: [
+            {
+                data: 'id',
+                name: 'id',
+                className: 'text-center mobilenzo-column',
+                searchable: false,
+                width: '40px',
+                render: function(data) {
+                    return `<input type="checkbox" class="form-check-input row-product-checkbox" data-product-id="${data}">`;
+                }
+            },
             // { data: 'odoo_id', name: 'id', className: 'text-center', width: '60px' },
             { data: 'name', name: 'name', className: 'text-start mobilenzo-column', width: '250px' },
             { data: 'default_code', name: 'default_code', className: 'text-center mobilenzo-column', width: '120px' },
@@ -881,8 +1022,100 @@ $(document).ready(function() {
         ]
     });
 
-    $('#search').on('keyup', function() {
+    $('#filterName, #filterSku').on('keyup', function() {
         table.ajax.reload();
+    });
+
+    $(document).on('change', '.row-product-checkbox', function() {
+        const productId = String($(this).data('product-id'));
+        if ($(this).is(':checked')) {
+            selectedProductIds.add(productId);
+        } else {
+            selectedProductIds.delete(productId);
+        }
+        syncSelectAllState();
+        updateBulkActionBar();
+    });
+
+    $(document).on('change', '#selectAllProducts', function() {
+        const isChecked = $(this).is(':checked');
+        $('.row-product-checkbox').each(function() {
+            const productId = String($(this).data('product-id'));
+            $(this).prop('checked', isChecked);
+            if (isChecked) {
+                selectedProductIds.add(productId);
+            } else {
+                selectedProductIds.delete(productId);
+            }
+        });
+        syncSelectAllState();
+        updateBulkActionBar();
+    });
+
+    $(document).on('click', '#clearBulkSelectionBtn', function() {
+        selectedProductIds.clear();
+        $('.row-product-checkbox').prop('checked', false);
+        syncSelectAllState();
+        updateBulkActionBar();
+    });
+
+    $(document).on('click', '#bulkSyncPricingBtn', function() {
+        const ids = getSelectedProductIds();
+        if (!ids.length) {
+            toastr.warning('Please select at least one product.');
+            return;
+        }
+
+        showPageLoading();
+        $.post("{{ route('products.bulkSyncPricing') }}", {
+            _token: "{{ csrf_token() }}",
+            product_ids: ids
+        }).done(function(response) {
+            hidePageLoading();
+            if (response.success) {
+                const summary = response.summary || {};
+                toastr.success(
+                    `Pricing updated. Source: ${summary.source_updated || 0}, Competitors: ${summary.competitor_prices_updated || 0}, Failed: ${summary.failed_products || 0}`
+                );
+                reloadPageAfterSuccessToast();
+            } else {
+                toastr.error(response.message || 'Bulk pricing sync failed.');
+            }
+        }).fail(function(xhr) {
+            hidePageLoading();
+            toastr.error(xhr.responseJSON?.message || 'Bulk pricing sync failed.');
+        });
+    });
+
+    $(document).on('click', '#bulkDeleteBtn', function() {
+        const ids = getSelectedProductIds();
+        if (!ids.length) {
+            toastr.warning('Please select at least one product.');
+            return;
+        }
+
+        if (!confirm(`Delete ${ids.length} selected product(s)? This cannot be undone.`)) {
+            return;
+        }
+
+        showPageLoading();
+        $.post("{{ route('products.bulkDelete') }}", {
+            _token: "{{ csrf_token() }}",
+            product_ids: ids
+        }).done(function(response) {
+            hidePageLoading();
+            if (response.success) {
+                selectedProductIds.clear();
+                updateBulkActionBar();
+                toastr.success(response.message || 'Products deleted successfully.');
+                reloadPageAfterSuccessToast();
+            } else {
+                toastr.error(response.message || 'Bulk delete failed.');
+            }
+        }).fail(function(xhr) {
+            hidePageLoading();
+            toastr.error(xhr.responseJSON?.message || 'Bulk delete failed.');
+        });
     });
 
     // Filter change handlers
@@ -904,7 +1137,24 @@ $(document).ready(function() {
         if ($(this).val() && !competitorId) {
             toastr.warning('Please select a competitor first to sort by price');
             $(this).val('');
+            $('#filterProductPriceSort').prop('disabled', false);
             return;
+        }
+        // Avoid confusion: if competitor price sort is selected, product price sort is ignored
+        if ($(this).val()) {
+            $('#filterProductPriceSort').val('').prop('disabled', true);
+        } else {
+            $('#filterProductPriceSort').prop('disabled', false);
+        }
+        table.ajax.reload();
+    });
+
+    $('#filterProductPriceSort').on('change', function() {
+        // Avoid confusion: if product price sort is selected, competitor price sort is ignored
+        if ($(this).val()) {
+            $('#filterPriceSort').val('').prop('disabled', true);
+        } else {
+            $('#filterPriceSort').prop('disabled', false);
         }
         table.ajax.reload();
     });
@@ -914,9 +1164,34 @@ $(document).ready(function() {
         table.ajax.reload();
     });
 
-    // Clear search function
-    window.clearSearch = function() {
-        $('#search').val('');
+    $('#resetFiltersBtn').on('click', function() {
+        $('#filterName').val('');
+        $('#filterSku').val('');
+        $('#filterCategory').val('');
+        $('#filterCompetitor').val('');
+
+        $('#filterPriceSort').val('').prop('disabled', false);
+        $('#filterProductPriceSort').val('').prop('disabled', false);
+        $('#filterPriceComparison').val('');
+
+        // Clear selection state (optional, but keeps UX consistent)
+        selectedProductIds.clear();
+        $('.row-product-checkbox').prop('checked', false);
+        syncSelectAllState();
+        updateBulkActionBar();
+
+        table.ajax.reload();
+    });
+
+    // Clear name filter function
+    window.clearNameFilter = function() {
+        $('#filterName').val('');
+        table.ajax.reload();
+    };
+
+    // Clear SKU filter function
+    window.clearSkuFilter = function() {
+        $('#filterSku').val('');
         table.ajax.reload();
     };
 
@@ -925,10 +1200,12 @@ $(document).ready(function() {
         showPageLoading();
         // Get current filter values
         var filters = {
-            searchData: $('#search').val(),
+            filter_name: $('#filterName').val(),
+            filter_sku: $('#filterSku').val(),
             category: $('#filterCategory').val(),
             competitor_id: $('#filterCompetitor').val(),
             price_sort: $('#filterPriceSort').val(),
+            product_price_sort: $('#filterProductPriceSort').val(),
             price_comparison: $('#filterPriceComparison').val(),
             _token: "{{ csrf_token() }}",
             export: true,
@@ -961,6 +1238,20 @@ $(document).ready(function() {
         return tmp.textContent || tmp.innerText || '';
     }
 
+    function getCategoryForExport(row) {
+        var categoryName = (row.category_name || '').toString().trim();
+        if (categoryName) {
+            return categoryName;
+        }
+
+        var categoryFromDisplay = stripHtml(row.category_display || '').replace(/\s+/g, ' ').trim();
+        if (categoryFromDisplay) {
+            return categoryFromDisplay;
+        }
+
+        return 'No Category';
+    }
+
     function exportToCsv(data) {
         var csv = [];
         var headers = ['Product Name', 'SKU', 'Category', 'Price', 'Cost'];
@@ -976,7 +1267,7 @@ $(document).ready(function() {
             var values = [
                 '"' + (row.name || '').replace(/"/g, '""') + '"',
                 '"' + (row.default_code || '').replace(/"/g, '""') + '"',
-                '"' + stripHtml(row.category_display || '').replace(/"/g, '""') + '"',
+                '"' + getCategoryForExport(row).replace(/"/g, '""') + '"',
                 row.list_price || '0.00',
                 row.cost || '0.00'
             ];
@@ -1001,43 +1292,105 @@ $(document).ready(function() {
     }
 
     function exportToExcel(data) {
-        // For Excel, we'll use CSV format which Excel can open
-        // Or we can use a library like SheetJS if needed
-        var csv = [];
+        if (typeof XLSX === 'undefined') {
+            toastr.error('Excel library not loaded. Please refresh and try again.');
+            return;
+        }
+
         var headers = ['Product Name', 'SKU', 'Category', 'Price', 'Cost'];
-        
         @foreach ($competitors as $competitor)
         headers.push('{{ $competitor->shortname ?? $competitor->name }}');
         @endforeach
-        
-        csv.push(headers.join('\t'));
-        
+
+        var sheetRows = [headers];
         data.forEach(function(row) {
-            var values = [
+            var rowValues = [
                 row.name || '',
                 row.default_code || '',
-                stripHtml(row.category_display || ''),
-                row.list_price || '0.00',
-                row.cost || '0.00'
+                getCategoryForExport(row),
+                parseFloat(row.list_price) || 0,
+                parseFloat(row.cost) || 0
             ];
-            
+
             @foreach ($competitors as $competitor)
-            values.push(row.competitor_price_{{ $competitor->id }} || '0.00');
+            rowValues.push(parseFloat(row.competitor_price_{{ $competitor->id }}) || 0);
             @endforeach
-            
-            csv.push(values.join('\t'));
+
+            sheetRows.push(rowValues);
         });
-        
-        var csvContent = csv.join('\n');
-        var blob = new Blob([csvContent], { type: 'application/vnd.ms-excel' });
-        var link = document.createElement('a');
-        var url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', 'products_' + new Date().toISOString().split('T')[0] + '.xls');
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+
+        var ws = XLSX.utils.aoa_to_sheet(sheetRows);
+
+        // Column widths in characters for better Excel/LibreOffice display.
+        var colWidths = [
+            { wch: 55 }, // Product Name
+            { wch: 28 }, // SKU
+            { wch: 24 }, // Category
+            { wch: 12 }, // Price
+            { wch: 12 }  // Cost
+        ];
+        @foreach ($competitors as $competitor)
+        colWidths.push({ wch: 12 });
+        @endforeach
+        ws['!cols'] = colWidths;
+
+        // Center header row text.
+        for (var h = 0; h < headers.length; h++) {
+            var headerRef = XLSX.utils.encode_col(h) + '1';
+            if (ws[headerRef]) {
+                ws[headerRef].s = {
+                    alignment: { horizontal: 'center', vertical: 'center' },
+                    font: { bold: true }
+                };
+            }
+        }
+
+        // Apply number format to price/cost and competitor price columns.
+        for (var r = 1; r < sheetRows.length; r++) {
+            // Price (D) and Cost (E)
+            ['D', 'E'].forEach(function(col) {
+                var ref = col + (r + 1);
+                if (ws[ref]) ws[ref].z = '0.00';
+            });
+
+            var competitorStartIndex = 5; // 0-based, starts after cost
+            var competitorColumnsCount = headers.length - competitorStartIndex;
+            for (var c = 0; c < competitorColumnsCount; c++) {
+                var colLetter = XLSX.utils.encode_col(competitorStartIndex + c);
+                var cellRef = colLetter + (r + 1);
+                if (ws[cellRef]) ws[cellRef].z = '0.00';
+            }
+        }
+
+        var wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Products');
+        XLSX.writeFile(wb, 'products_' + new Date().toISOString().split('T')[0] + '.xlsx', { cellStyles: true });
+    }
+
+    function addLogoToPdf(doc, pageWidth, done) {
+        var logoUrl = "{{ asset('images/Mobilenzo_Logo_V3_1_.png') }}";
+        var logoImg = new Image();
+
+        logoImg.onload = function() {
+            try {
+                var logoWidth = 52;
+                var ratio = (logoImg.naturalHeight || 1) / (logoImg.naturalWidth || 1);
+                var logoHeight = Math.max(8, logoWidth * ratio);
+                var logoX = (pageWidth - logoWidth) / 2;
+                var logoY = 8;
+
+                doc.addImage(logoImg, 'PNG', logoX, logoY, logoWidth, logoHeight);
+                done(logoY + logoHeight + 5);
+            } catch (e) {
+                done(15);
+            }
+        };
+
+        logoImg.onerror = function() {
+            done(15);
+        };
+
+        logoImg.src = logoUrl;
     }
 
     function exportToPdf(data) {
@@ -1070,7 +1423,7 @@ $(document).ready(function() {
                 var rowData = [
                     (row.name || '').substring(0, 30), // Limit length
                     row.default_code || '',
-                    stripHtml(row.category_display || '').substring(0, 20),
+                    getCategoryForExport(row).substring(0, 20),
                     '$' + (parseFloat(row.list_price) || 0).toFixed(2),
                     '$' + (parseFloat(row.cost) || 0).toFixed(2)
                 ];
@@ -1082,78 +1435,82 @@ $(document).ready(function() {
                 tableData.push(rowData);
             });
 
-            // Add title (centered)
             const pageWidth = doc.internal.pageSize.getWidth();
-            doc.setFontSize(16);
-            doc.setFont(undefined, 'bold');
-            const titleText = 'Products Export';
-            const titleWidth = doc.getTextWidth(titleText);
-            doc.text(titleText, (pageWidth - titleWidth) / 2, 15);
-            
-            // Add date (centered)
-            doc.setFontSize(10);
-            doc.setFont(undefined, 'normal');
-            const dateText = 'Generated: ' + new Date().toLocaleDateString();
-            const dateWidth = doc.getTextWidth(dateText);
-            doc.text(dateText, (pageWidth - dateWidth) / 2, 22);
-
-            // Add table using autoTable if available, otherwise use manual table
-            if (typeof doc.autoTable !== 'undefined') {
-                doc.autoTable({
-                    head: headers,
-                    body: tableData,
-                    startY: 28,
-                    styles: { fontSize: 7, cellPadding: 2 },
-                    headStyles: { fillColor: [66, 139, 202], textColor: 255, fontStyle: 'bold' },
-                    alternateRowStyles: { fillColor: [245, 245, 245] },
-                    margin: { top: 28, left: 14, right: 14 },
-                    tableWidth: 'wrap'
-                });
-            } else {
-                // Manual table creation without autoTable
-                doc.setFontSize(8);
-                var y = 28;
-                var colWidth = 35;
-                var startX = 14;
-                
-                // Draw header background
-                doc.setFillColor(66, 139, 202);
-                doc.rect(startX, y - 5, colWidth * headers[0].length, 6, 'F');
-                
-                // Header text
-                doc.setTextColor(255, 255, 255);
+            addLogoToPdf(doc, pageWidth, function(contentStartY) {
+                // Add title and date centered under logo
+                doc.setFontSize(16);
                 doc.setFont(undefined, 'bold');
-                headers[0].forEach(function(header, i) {
-                    doc.text(header.substring(0, 12), startX + (i * colWidth) + 2, y);
-                });
-                
-                // Data rows
-                doc.setTextColor(0, 0, 0);
-                doc.setFont(undefined, 'normal');
-                y += 8;
-                tableData.forEach(function(row, rowIndex) {
-                    // Alternate row background
-                    if (rowIndex % 2 === 0) {
-                        doc.setFillColor(245, 245, 245);
-                        doc.rect(startX, y - 4, colWidth * row.length, 5, 'F');
-                    }
-                    
-                    row.forEach(function(cell, i) {
-                        doc.text(cell.toString().substring(0, 12), startX + (i * colWidth) + 2, y);
-                    });
-                    y += 6;
-                    
-                    if (y > 190) {
-                        doc.addPage();
-                        y = 20;
-                    }
-                });
-            }
+                const titleText = 'Products Export';
+                const titleWidth = doc.getTextWidth(titleText);
+                doc.text(titleText, (pageWidth - titleWidth) / 2, contentStartY);
 
-            // Save PDF
-            var filename = 'products_' + new Date().toISOString().split('T')[0] + '.pdf';
-            doc.save(filename);
-            toastr.success('PDF exported successfully!');
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'normal');
+                const dateText = 'Generated: ' + new Date().toLocaleDateString();
+                const dateWidth = doc.getTextWidth(dateText);
+                doc.text(dateText, (pageWidth - dateWidth) / 2, contentStartY + 7);
+
+                var tableStartY = contentStartY + 13;
+
+                // Add table using autoTable if available, otherwise use manual table
+                if (typeof doc.autoTable !== 'undefined') {
+                    doc.autoTable({
+                        head: headers,
+                        body: tableData,
+                        startY: tableStartY,
+                        styles: { fontSize: 7, cellPadding: 2, halign: 'center', valign: 'middle' },
+                        headStyles: { fillColor: [66, 139, 202], textColor: 255, fontStyle: 'bold', halign: 'center' },
+                        alternateRowStyles: { fillColor: [245, 245, 245] },
+                        margin: { top: tableStartY, left: 14, right: 14 },
+                        tableWidth: pageWidth - 28
+                    });
+                } else {
+                    // Manual table creation without autoTable (centered table)
+                    doc.setFontSize(8);
+                    var y = tableStartY;
+                    var availableWidth = pageWidth - 28;
+                    var colWidth = Math.min(35, availableWidth / headers[0].length);
+                    var tableWidth = colWidth * headers[0].length;
+                    var startX = (pageWidth - tableWidth) / 2;
+                    
+                    // Draw header background
+                    doc.setFillColor(66, 139, 202);
+                    doc.rect(startX, y - 5, tableWidth, 6, 'F');
+                    
+                    // Header text
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFont(undefined, 'bold');
+                    headers[0].forEach(function(header, i) {
+                        doc.text(header.substring(0, 12), startX + (i * colWidth) + (colWidth / 2), y, { align: 'center' });
+                    });
+                    
+                    // Data rows
+                    doc.setTextColor(0, 0, 0);
+                    doc.setFont(undefined, 'normal');
+                    y += 8;
+                    tableData.forEach(function(row, rowIndex) {
+                        if (rowIndex % 2 === 0) {
+                            doc.setFillColor(245, 245, 245);
+                            doc.rect(startX, y - 4, tableWidth, 5, 'F');
+                        }
+                        
+                        row.forEach(function(cell, i) {
+                            doc.text(cell.toString().substring(0, 12), startX + (i * colWidth) + (colWidth / 2), y, { align: 'center' });
+                        });
+                        y += 6;
+                        
+                        if (y > 190) {
+                            doc.addPage();
+                            y = 20;
+                        }
+                    });
+                }
+
+                // Save PDF
+                var filename = 'products_' + new Date().toISOString().split('T')[0] + '.pdf';
+                doc.save(filename);
+                toastr.success('PDF exported successfully!');
+            });
         } catch (error) {
             console.error('PDF export error:', error);
             toastr.error('Failed to generate PDF. Please try again.');

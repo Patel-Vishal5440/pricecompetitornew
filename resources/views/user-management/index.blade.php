@@ -91,12 +91,26 @@
                 document.getElementById("loadingIndicator").style.display = "none";
             }
             
+    function updateTableCountInfo(tableApi) {
+        var info = tableApi.page.info();
+        var onCurrentPage = Math.max(0, info.end - info.start);
+        var filteredCount = info.recordsDisplay || 0;
+        var totalCount = info.recordsTotal || 0;
+
+        var countText = 'On this page: <strong>' + onCurrentPage + '</strong> | Total: <strong>' + totalCount + '</strong>';
+        if (filteredCount !== totalCount) {
+            countText = 'On this page: <strong>' + onCurrentPage + '</strong> | Filtered: <strong>' + filteredCount + '</strong> | Total: <strong>' + totalCount + '</strong>';
+        }
+
+        $('.user-management-table-count-info').html(countText);
+    }
+
             let table = $('#datatable').DataTable({
                 processing: true,
                 serverSide: true,
                 searching: false,
                 ordering: false,
-                dom: 'rt<"bottom"lp><"clear">',
+        dom: 'rt<"bottom d-flex justify-content-between align-items-center flex-wrap gap-2"l<"user-management-table-count-info text-center flex-grow-1 small fw-semibold text-primary">p><"clear">',
                 language: {
                     emptyTable: `<div class="py-4 text-center text-muted">
                         <i class="fas fa-users fa-2x mb-2"></i><br>
@@ -123,7 +137,10 @@
                     { data: 'location', name: 'city', className: 'text-center', width: '200px' },
                     { data: 'created', name: 'created_at', className: 'text-center', width: '120px' },
                     { data: 'actions', name: 'actions', className: 'text-center', searchable: false, width: '200px' },
-                ]
+        ],
+        drawCallback: function() {
+            updateTableCountInfo(this.api());
+        }
             });
 
             $('#search').on('keyup', function() {

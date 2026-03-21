@@ -47,29 +47,29 @@
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
-                                    @if (!isset($user))
-                                        <div class="col-md-6 mb-3">
+                                    <div class="col-md-6 mb-3">
+                                        @if (!isset($user))
                                             <label for="password" class="form-label">Password <span
-                                                    class="text-danger">{{ isset($user) ? '' : '*' }}</span></label>
+                                                    class="text-danger">*</span></label>
                                             <input type="password"
                                                 class="form-control @error('password') is-invalid @enderror" id="password"
-                                                name="password" placeholder="Enter password"
-                                                {{ isset($user) ? '' : 'required' }}>
+                                                name="password" placeholder="Enter password" required>
                                             <div class="form-text" id="password-strength"></div>
                                             <div class="invalid-feedback" id="password-error"></div>
                                             @error('password')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
-                                        </div>
-                                        <div class="col-md-6 mb-3">
+                                        @endif
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        @if (!isset($user))
                                             <label for="password_confirmation" class="form-label">Confirm Password <span
-                                                    class="text-danger">{{ isset($user) ? '' : '*' }}</span></label>
+                                                    class="text-danger">*</span></label>
                                             <input type="password" class="form-control" id="password_confirmation"
-                                                name="password_confirmation" placeholder="Confirm password"
-                                                {{ isset($user) ? '' : 'required' }}>
+                                                name="password_confirmation" placeholder="Confirm password" required>
                                             <div class="invalid-feedback" id="password-confirmation-error"></div>
-                                        </div>
-                                    @endif
+                                        @endif
+                                    </div>
                                     <div class="col-md-6 mb-3">
                                         <label for="role_id" class="form-label">Role</label>
                                         <select class="form-control @error('role_id') is-invalid @enderror" id="role_id"
@@ -172,14 +172,10 @@
 
             const form = document.getElementById('userForm');
             const submitBtn = document.getElementById('submitBtn');
-            const isEditMode = {{ isset($user) ? 'true' : 'false' }};
-
             if (!form) {
                 console.error('Form not found');
                 return;
             }
-
-            console.log('Edit mode:', isEditMode);
 
             // Form elements
             const nameInput = document.getElementById('name');
@@ -255,9 +251,17 @@
 
                 const password = passwordInput.value;
 
-                if (!isEditMode && !password) {
-                    showError(passwordInput, passwordError, 'Password is required');
-                    return false;
+                // Password is optional on edit. Only validate strength when a value is provided.
+                if (!password) {
+                    // On create page, password input has `required` attribute.
+                    if (passwordInput.hasAttribute('required')) {
+                        showError(passwordInput, passwordError, 'Password is required');
+                        return false;
+                    }
+
+                    passwordStrength.innerHTML = '';
+                    hideError(passwordInput, passwordError);
+                    return true;
                 }
 
                 if (password && !patterns.password.test(password)) {
@@ -309,7 +313,14 @@
                 const password = passwordInput.value;
                 const confirmation = passwordConfirmationInput.value;
 
-                if (!isEditMode && !confirmation) {
+                // On create page, confirmation is required even if password is empty (user must fill both).
+                if (passwordInput.hasAttribute('required') && !confirmation) {
+                    showError(passwordConfirmationInput, passwordConfirmationError, 'Please confirm your password');
+                    return false;
+                }
+
+                // Only require confirmation when admin enters a new password.
+                if (password && !confirmation) {
                     showError(passwordConfirmationInput, passwordConfirmationError, 'Please confirm your password');
                     return false;
                 }

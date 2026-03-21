@@ -10,11 +10,36 @@ use Yajra\DataTables\DataTables;
 
 class ProductRepository
 {
+    private function resolveCategoryName($product): string
+    {
+        if (!empty($product->category_id)) {
+            // Prefer relation when available, but avoid relation/attribute naming collision on "category".
+            $relationValue = $product->getRelationValue('category');
+            if ($relationValue && !empty($relationValue->name)) {
+                return $relationValue->name;
+            }
+
+            $category = Category::find($product->category_id);
+            if ($category && !empty($category->name)) {
+                return $category->name;
+            }
+        }
+
+        if (!empty($product->category) && is_string($product->category)) {
+            return $product->category;
+        }
+
+        return 'No Category';
+    }
+
     public function dataSource(Request $request){
-        $searchData = $request->get('searchData', null);
+        $searchData = $request->get('searchData', null); // backward compatibility
+        $filterName = $request->get('filter_name', null);
+        $filterSku = $request->get('filter_sku', null);
         $category = $request->get('category', null);
         $competitorId = $request->get('competitor_id', null);
         $priceSort = $request->get('price_sort', null); // 'low_to_high' or 'high_to_low'
+        $productPriceSort = $request->get('product_price_sort', null); // 'low_to_high' or 'high_to_low'
         $priceComparison = $request->get('price_comparison', null); // 'higher' or 'lower'
         $isExport = $request->get('export', false);
         $length = $request->get('length', 10);
@@ -25,6 +50,12 @@ class ProductRepository
                     $query->where('name', 'like', "%{$searchData}%")
                           ->orWhere('default_code', 'like', "%{$searchData}%");
                 });
+            })
+            ->when($filterName, function (Builder $query, $filterName) {
+                return $query->where('name', 'like', "%{$filterName}%");
+            })
+            ->when($filterSku, function (Builder $query, $filterSku) {
+                return $query->where('default_code', 'like', "%{$filterSku}%");
             })
             ->when($category, function (Builder $query, $category) {
                 // Check if category is numeric (category_id) or string (legacy category name)
@@ -103,6 +134,8 @@ class ProductRepository
         // Handle price sorting by competitor price (after select)
         if ($priceSort && $competitorId) {
             $product->orderBy('product_competitor_prices.price', $priceSort === 'high_to_low' ? 'desc' : 'asc');
+        } elseif ($productPriceSort) {
+            $product->orderBy('products.list_price', $productPriceSort === 'high_to_low' ? 'desc' : 'asc');
         } else {
             // Default ordering if no price sort is applied
             $product->latest('id');
@@ -125,21 +158,7 @@ class ProductRepository
         // Add category display column - matching category module status format
         $dataTable->addColumn('category_display', function ($product) {
             try {
-                $categoryName = '';
-                if ($product->category_id && $product->relationLoaded('category') && $product->category) {
-                    $categoryName = $product->category->name;
-                } elseif ($product->category_id) {
-                    $category = Category::find($product->category_id);
-                    if ($category) {
-                        $categoryName = $category->name;
-                    }
-                } elseif ($product->category) {
-                    $categoryName = $product->category;
-                }
-                
-                if (empty($categoryName)) {
-                    $categoryName = 'No Category';
-                }
+                $categoryName = $this->resolveCategoryName($product);
                 
                 // Match category module status display format - rectangle with border
                 $borderColor = '#6c757d'; // Gray border for category
@@ -148,13 +167,16 @@ class ProductRepository
                     {$categoryName}
                 </span>";
             } catch (\Exception $e) {
-                $categoryName = $product->category ?? 'No Category';
+                $categoryName = $this->resolveCategoryName($product);
                 $borderColor = '#6c757d';
                 $textColor = '#6c757d';
                 return "<span style='display: inline-block; padding: 6px 12px; border: 1px solid {$borderColor}; border-radius: 4px; background-color: transparent; color: {$textColor}; font-size: 12px; font-weight: 500; text-align: center; min-width: 80px;'>
                     {$categoryName}
                 </span>";
             }
+        })
+        ->addColumn('category_name', function ($product) {
+            return $this->resolveCategoryName($product);
         })
         ->addColumn('category_id', function ($product) {
             return $product->category_id ?? null;

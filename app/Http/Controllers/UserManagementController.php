@@ -150,7 +150,15 @@ class UserManagementController extends Controller
      */
     public function update(Request $request, User $user)
     {
-        $validator = Validator::make($request->all(), [
+        // If admin leaves password blank on edit, convert empty string to null
+        // so `nullable` validation rules skip properly.
+        $input = $request->all();
+        if (array_key_exists('password', $input) && trim((string) $input['password']) === '') {
+            $input['password'] = null;
+            $input['password_confirmation'] = null;
+        }
+
+        $validator = Validator::make($input, [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:8|confirmed',

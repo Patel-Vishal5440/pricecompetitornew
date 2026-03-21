@@ -79,13 +79,27 @@
             function hidePageLoading() {
                 document.getElementById("loadingIndicator").style.display = "none";
             }
+
+            function updateTableCountInfo(tableApi) {
+                var info = tableApi.page.info();
+                var onCurrentPage = Math.max(0, info.end - info.start);
+                var filteredCount = info.recordsDisplay || 0;
+                var totalCount = info.recordsTotal || 0;
+
+                var countText = 'On this page: <strong>' + onCurrentPage + '</strong> | Total: <strong>' + totalCount + '</strong>';
+                if (filteredCount !== totalCount) {
+                    countText = 'On this page: <strong>' + onCurrentPage + '</strong> | Filtered: <strong>' + filteredCount + '</strong> | Total: <strong>' + totalCount + '</strong>';
+                }
+
+                $('.price-history-table-count-info').html(countText);
+            }
             
             let table = $('#datatable').DataTable({
                 processing: true,
                 serverSide: true,
                 searching: false,
                 ordering: false,
-                dom: 'rt<"bottom"lp><"clear">',
+                dom: 'rt<"bottom d-flex justify-content-between align-items-center flex-wrap gap-2"l<"price-history-table-count-info text-center flex-grow-1 small fw-semibold text-primary">p><"clear">',
                 language: {
                     emptyTable: `<div class="py-4 text-center text-muted">
                         <i class="fas fa-history fa-2x mb-2"></i><br>
@@ -109,7 +123,10 @@
                     { data: 'price_old', name: 'price_old', className: 'text-center', width: '120px' },
                     { data: 'price_new', name: 'price_new', className: 'text-center', width: '120px' },
                     { data: 'performed_by', name: 'user.name', className: 'text-center', width: '150px' },
-                ]
+                ],
+                drawCallback: function() {
+                    updateTableCountInfo(this.api());
+                }
             });
 
             $('#search').on('keyup', function() {

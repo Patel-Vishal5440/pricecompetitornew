@@ -90,12 +90,26 @@
                 document.getElementById("loadingIndicator").style.display = "none";
             }
             
+            function updateTableCountInfo(tableApi) {
+                var info = tableApi.page.info();
+                var onCurrentPage = Math.max(0, info.end - info.start);
+                var filteredCount = info.recordsDisplay || 0;
+                var totalCount = info.recordsTotal || 0;
+
+                var countText = 'On this page: <strong>' + onCurrentPage + '</strong> | Total: <strong>' + totalCount + '</strong>';
+                if (filteredCount !== totalCount) {
+                    countText = 'On this page: <strong>' + onCurrentPage + '</strong> | Filtered: <strong>' + filteredCount + '</strong> | Total: <strong>' + totalCount + '</strong>';
+                }
+
+                $('.roles-table-count-info').html(countText);
+            }
+
             let table = $('#datatable').DataTable({
                 processing: true,
                 serverSide: true,
                 searching: false,
                 ordering: false,
-                dom: 'rt<"bottom"lp><"clear">',
+                dom: 'rt<"bottom d-flex justify-content-between align-items-center flex-wrap gap-2"l<"roles-table-count-info text-center flex-grow-1 small fw-semibold text-primary">p><"clear">',
                 language: {
                     emptyTable: `<div class="py-4 text-center text-muted">
                         <i class="fas fa-shield-alt fa-2x mb-2"></i><br>
@@ -122,7 +136,10 @@
                     { data: 'users', name: 'users_count', className: 'text-center', width: '100px' },
                     { data: 'status', name: 'is_active', className: 'text-center', width: '120px' },
                     { data: 'actions', name: 'actions', className: 'text-center', searchable: false, width: '200px' },
-                ]
+                ],
+                drawCallback: function() {
+                    updateTableCountInfo(this.api());
+                }
             });
 
             $('#search').on('keyup', function() {

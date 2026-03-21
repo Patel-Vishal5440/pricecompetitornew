@@ -91,13 +91,27 @@ $(document).ready(function() {
     function hidePageLoading() {
         document.getElementById("loadingIndicator").style.display = "none";
     }
+
+    function updateTableCountInfo(tableApi) {
+        var info = tableApi.page.info();
+        var onCurrentPage = Math.max(0, info.end - info.start);
+        var filteredCount = info.recordsDisplay || 0;
+        var totalCount = info.recordsTotal || 0;
+
+        var countText = 'On this page: <strong>' + onCurrentPage + '</strong> | Total: <strong>' + totalCount + '</strong>';
+        if (filteredCount !== totalCount) {
+            countText = 'On this page: <strong>' + onCurrentPage + '</strong> | Filtered: <strong>' + filteredCount + '</strong> | Total: <strong>' + totalCount + '</strong>';
+        }
+
+        $('.permissions-table-count-info').html(countText);
+    }
     
     let table = $('#datatable').DataTable({
         processing: true,
         serverSide: true,
         searching: false,   
         ordering: false,
-        dom: 'rt<"bottom"lp><"clear">',
+        dom: 'rt<"bottom d-flex justify-content-between align-items-center flex-wrap gap-2"l<"permissions-table-count-info text-center flex-grow-1 small fw-semibold text-primary">p><"clear">',
         language: {
             emptyTable: `<div class="py-4 text-center text-muted">
                 <i class="fas fa-shield-alt fa-2x mb-2"></i><br>
@@ -122,7 +136,10 @@ $(document).ready(function() {
             { data: 'assigned_roles', name: 'assigned_roles', className: 'text-center' },
             { data: 'status', name: 'status', className: 'text-center' },
             { data: 'actions', name: 'actions', className: 'text-center', searchable: false }
-        ]
+        ],
+        drawCallback: function() {
+            updateTableCountInfo(this.api());
+        }
     });
 
     $('#search').on('keyup', function() {
