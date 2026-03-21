@@ -120,6 +120,7 @@ Route::group(['middleware' => 'auth'], function () {
 
     Route::group(['prefix' => 'products'], function () {
         Route::get('/list', [ProductController::class, 'index'])->name('products.list');
+        Route::get('/import-status', [ProductController::class, 'importStatusPage'])->name('products.import-status');
         Route::post('/store', [ProductController::class, 'store'])->name('products.store');
         Route::post('/add-link', [ProductController::class, 'addLink'])
         ->name('products.addLink');
@@ -134,6 +135,8 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/sync-products', [ProductController::class, 'syncProducts'])->name('products.syncProducts');
         Route::post('/import-price-update', [ProductController::class, 'importPriceUpdate'])->name('products.importPriceUpdate');
         Route::post('/import-bulk-products', [ProductController::class, 'importBulkProducts'])->name('products.importBulkProducts');
+        Route::get('/import-bulk-products/status/{id}', [ProductController::class, 'bulkImportStatus'])->name('products.bulkImportStatus');
+        Route::get('/import-bulk-products/jobs', [ProductController::class, 'bulkImportJobs'])->name('products.bulkImportJobs');
         Route::get('/download-price-update-sample', [ProductController::class, 'downloadPriceUpdateSample'])->name('products.downloadPriceUpdateSample');
         Route::get('/download-bulk-products-sample', [ProductController::class, 'downloadBulkProductsSample'])->name('products.downloadBulkProductsSample');
     });

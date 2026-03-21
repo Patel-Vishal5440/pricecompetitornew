@@ -5,9 +5,15 @@
             <span>Main menu</span>
          </li>
          <li>
-            <a href="{{ route('products.list') }}" class="{{ request()->is('products*') ? 'active' : ''}}">
+            <a href="{{ route('products.list') }}" class="{{ request()->is('products/list') ? 'active' : ''}}">
                 <span data-feather="package" class="nav-icon"></span>
                 <span class="menu-text">Products</span>
+            </a>
+         </li>
+         <li>
+            <a href="{{ route('products.import-status') }}" class="{{ request()->is('products/import-status') ? 'active' : ''}}">
+                <span data-feather="list" class="nav-icon"></span>
+                <span class="menu-text">Import Status</span>
             </a>
          </li>
          <li>

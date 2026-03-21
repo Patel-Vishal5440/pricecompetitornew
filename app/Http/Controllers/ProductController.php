@@ -16,10 +16,13 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Artisan;
 use App\Jobs\ScrapeCompetitorPrice;
 use App\Jobs\StoreOdooProducts;
+use App\Jobs\ProcessBulkProductImport;
 use App\Models\ActivityFeed;
+use App\Models\BulkImportJob;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use App\Traits\ScrapesCompetitorPrice;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -58,6 +61,14 @@ class ProductController extends Controller
             'legacyCategories' => $legacyCategories
         ]);
         
+    }
+
+    public function importStatusPage()
+    {
+        return view('product.import-status', [
+            'pageTitle' => 'Import Status',
+            'pageDescription' => 'Bulk import job status details',
+        ]);
     }
 
     public function syncProducts()
@@ -773,223 +784,30 @@ class ProductController extends Controller
         ]);
 
         try {
-            // Get all competitors for domain matching
-            $competitors = Competitor::all();
-            
-            if ($competitors->isEmpty()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No competitors found in database'
-                ], 400);
-            }
-
             $file = $request->file('file');
-            $path = $file->getRealPath();
-            
-            $results = [
-                'success' => 0,
-                'failed' => 0,
-                'errors' => []
-            ];
+            $storedPath = $file->store('imports');
+            $absolutePath = storage_path('app/' . $storedPath);
+            $totalRows = $this->countCsvDataRows($absolutePath);
 
-            // Read CSV file
-            $handle = fopen($path, 'r');
-            if ($handle === false) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to read CSV file'
-                ], 400);
-            }
-
-            // Read header row and handle BOM
-            $header = fgetcsv($handle);
-            if ($header && !empty($header[0])) {
-                // Remove BOM if present
-                $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
-            }
-            $rowNumber = 1;
-            
-            Log::info('Bulk import started', [
-                'header' => $header,
-                'competitors_count' => $competitors->count()
+            $importJob = BulkImportJob::create([
+                'user_id' => Auth::id(),
+                'type' => 'products',
+                'status' => 'queued',
+                'total_rows' => $totalRows,
+                'processed_rows' => 0,
+                'success_count' => 0,
+                'failed_count' => 0,
+                'errors' => [],
+                'uploaded_file_path' => $storedPath,
+                'message' => 'Import queued.',
             ]);
 
-            while (($row = fgetcsv($handle)) !== false) {
-                $rowNumber++;
-                
-                // Skip empty rows
-                if (empty(array_filter($row))) {
-                    continue;
-                }
-                
-                if (count($row) < 2) {
-                    $results['failed']++;
-                    $results['errors'][] = "Row {$rowNumber}: Insufficient columns (expected: SKU, Category, and at least one Competitor URL). Found: " . count($row) . " columns";
-                    continue;
-                }
-
-                // Remove BOM from first column if present
-                $row[0] = preg_replace('/^\xEF\xBB\xBF/', '', $row[0]);
-                $sku = trim($row[0]);
-                $categoryName = isset($row[1]) ? trim($row[1]) : '';
-                
-                if (empty($sku)) {
-                    $results['failed']++;
-                    $results['errors'][] = "Row {$rowNumber}: SKU is required";
-                    continue;
-                }
-
-                // Fetch product from Odoo by SKU
-                try {
-                    $response = $this->odooService->fetchProductBySku($sku);
-                    
-                    if (!isset($response['success']) || !$response['success'] || empty($response['result'])) {
-                        $results['failed']++;
-                        $errorMsg = $response['message'] ?? 'Product not found in Odoo';
-                        $results['errors'][] = "Row {$rowNumber}: Product with SKU '{$sku}' not found in Odoo - " . $errorMsg;
-                        Log::warning("Bulk import: Product not found", ['sku' => $sku, 'response' => $response]);
-                        continue;
-                    }
-
-                    $odooProduct = $response['result'][0];
-
-                    // Initialize error tracking
-                    $urlsAdded = 0;
-                    $rowErrors = [];
-
-                    // Prepare product data
-                    $productData = [
-                        'name' => $odooProduct['name'] ?? null,
-                        'default_code' => $odooProduct['default_code'] ?? null,
-                        'list_price' => $odooProduct['list_price'] ?? 0,
-                        'barcode' => $odooProduct['barcode'] ?? null,
-                    ];
-
-                    // Handle category assignment if provided
-                    if (!empty($categoryName)) {
-                        // Find category by name (case-insensitive)
-                        $category = Category::whereRaw('LOWER(name) = ?', [strtolower($categoryName)])->first();
-                        
-                        if ($category) {
-                            $productData['category_id'] = $category->id;
-                            $productData['category'] = $category->name;
-                        } else {
-                            $rowErrors[] = "Category '{$categoryName}' not found. Please create the category first before importing.";
-                        }
-                    }
-
-                    // Create or update product
-                    $product = Product::updateOrCreate(
-                        ['odoo_id' => $odooProduct['id']],
-                        $productData
-                    );
-
-                    // Process all URL columns (starting from index 2, after SKU and Category)
-                    for ($i = 2; $i < count($row); $i++) {
-                        $url = trim($row[$i]);
-                        
-                        if (empty($url)) {
-                            continue; // Skip empty URLs
-                        }
-
-                        if (!filter_var($url, FILTER_VALIDATE_URL)) {
-                            $rowErrors[] = "Column " . ($i + 1) . ": Invalid URL format";
-                            continue;
-                        }
-
-                        // Find matching competitor by domain
-                        $matchedCompetitor = null;
-                        foreach ($competitors as $competitor) {
-                            if ($competitor->website && $this->validateDomainMatch($url, $competitor->website)) {
-                                $matchedCompetitor = $competitor;
-                                break;
-                            }
-                        }
-
-                        if (!$matchedCompetitor) {
-                            $parsedUrl = parse_url($url, PHP_URL_HOST);
-                            $rowErrors[] = "Column " . ($i + 1) . ": URL domain '{$parsedUrl}' does not match any competitor";
-                            Log::warning("Bulk import: Domain mismatch", [
-                                'url' => $url,
-                                'parsed_host' => $parsedUrl,
-                                'competitors' => $competitors->pluck('website')->toArray()
-                            ]);
-                            continue;
-                        }
-
-                        try {
-                            // Add competitor URL
-                            $productCompetitorPrice = ProductCompetitorPrice::updateOrCreate(
-                                [
-                                    'product_id' => $product->id,
-                                    'competitor_id' => $matchedCompetitor->id
-                                ],
-                                ['competitor_url' => $url]
-                            );
-
-                            // Scrape price (non-blocking - don't fail if scraping fails)
-                            try {
-                                $price = $this->scrapeCompetitorPrice($url);
-                                if ($price) {
-                                    $productCompetitorPrice->update(['price' => $price]);
-                                }
-                            } catch (\Exception $e) {
-                                Log::warning("Bulk import: Price scraping failed", [
-                                    'url' => $url,
-                                    'error' => $e->getMessage()
-                                ]);
-                                // Continue even if scraping fails
-                            }
-                            
-                            $urlsAdded++;
-                        } catch (\Exception $e) {
-                            $rowErrors[] = "Column " . ($i + 1) . ": Failed to add URL - " . $e->getMessage();
-                            Log::error("Bulk import: Failed to add competitor URL", [
-                                'url' => $url,
-                                'error' => $e->getMessage()
-                            ]);
-                        }
-                    }
-
-                    // Add row-level errors to results
-                    if (!empty($rowErrors)) {
-                        foreach ($rowErrors as $error) {
-                            $results['errors'][] = "Row {$rowNumber}: {$error}";
-                        }
-                    }
-
-                    // Consider import successful if product was created/updated, even if no URLs were added
-                    // But mark as failed if there were critical errors (like category not found)
-                    $hasCriticalError = false;
-                    foreach ($rowErrors as $error) {
-                        if (stripos($error, 'category') !== false && stripos($error, 'not found') !== false) {
-                            $hasCriticalError = true;
-                            break;
-                        }
-                    }
-
-                    if (!$hasCriticalError) {
-                        $results['success']++;
-                    } else {
-                        $results['failed']++;
-                    }
-                } catch (\Exception $e) {
-                    $results['failed']++;
-                    $results['errors'][] = "Row {$rowNumber}: Exception processing SKU '{$sku}' - " . $e->getMessage();
-                    Log::error("Bulk import: Exception", [
-                        'sku' => $sku,
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
-                    ]);
-                }
-            }
-
-            fclose($handle);
+            ProcessBulkProductImport::dispatch($importJob->id, $storedPath);
 
             return response()->json([
                 'success' => true,
-                'message' => "Import completed. Success: {$results['success']}, Failed: {$results['failed']}",
-                'results' => $results
+                'message' => 'Import queued successfully. Processing started in background.',
+                'import_job' => $this->formatImportJobResponse($importJob)
             ]);
 
         } catch (\Exception $e) {
@@ -997,11 +815,94 @@ class ProductController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+            if (!empty($storedPath ?? null)) {
+                Storage::disk('local')->delete($storedPath);
+            }
             return response()->json([
                 'success' => false,
                 'message' => 'Import failed: ' . $e->getMessage()
             ], 500);
+                        }
+                    }
+
+    public function bulkImportStatus(int $id)
+    {
+        $importJob = BulkImportJob::where('type', 'products')->findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'import_job' => $this->formatImportJobResponse($importJob),
+        ]);
+                        }
+
+    public function bulkImportJobs(Request $request)
+    {
+        $showAll = $request->boolean('all', false);
+        $limit = (int) $request->get('limit', 10);
+        $limit = max(1, min(500, $limit));
+
+        $jobsQuery = BulkImportJob::where('type', 'products')
+            ->orderByDesc('id');
+
+        if (!$showAll) {
+            $jobsQuery->limit($limit);
         }
+
+        $jobs = $jobsQuery->get()
+            ->map(function ($job) {
+                return $this->formatImportJobResponse($job);
+            });
+
+        return response()->json([
+            'success' => true,
+            'jobs' => $jobs,
+        ]);
+    }
+
+    private function countCsvDataRows(string $absolutePath): int
+    {
+        $count = 0;
+        $handle = fopen($absolutePath, 'r');
+        if ($handle === false) {
+            return 0;
+        }
+
+        // Skip header
+        fgetcsv($handle);
+        while (($row = fgetcsv($handle)) !== false) {
+            if (!empty(array_filter($row))) {
+                $count++;
+            }
+        }
+        fclose($handle);
+
+        return $count;
+                        }
+
+    private function formatImportJobResponse(BulkImportJob $job): array
+    {
+        $totalRows = (int) $job->total_rows;
+        $processedRows = (int) $job->processed_rows;
+        $percent = $totalRows > 0 ? (int) floor(($processedRows / $totalRows) * 100) : 0;
+        if (in_array($job->status, ['completed', 'failed'], true)) {
+            $percent = 100;
+        }
+
+        return [
+            'id' => $job->id,
+            'status' => $job->status,
+            'total_rows' => $totalRows,
+            'processed_rows' => $processedRows,
+            'success_count' => (int) $job->success_count,
+            'failed_count' => (int) $job->failed_count,
+            'progress_percent' => min(100, max(0, $percent)),
+            'message' => $job->message,
+            'errors' => is_array($job->errors) ? $job->errors : [],
+            'started_at' => optional($job->started_at)->toDateTimeString(),
+            'completed_at' => optional($job->completed_at)->toDateTimeString(),
+            'created_at' => optional($job->created_at)->toDateTimeString(),
+            'updated_at' => optional($job->updated_at)->toDateTimeString(),
+        ];
     }
 
     /**
@@ -1132,7 +1033,6 @@ class ProductController extends Controller
             
             // Increment to get next number
             $nextNumber = $maxNumber + 1;
-            
             // Ensure the number doesn't exceed 999 (to keep 3-digit format)
             if ($nextNumber > 999) {
                 throw new \Exception('Maximum manual product ID limit reached (999)');

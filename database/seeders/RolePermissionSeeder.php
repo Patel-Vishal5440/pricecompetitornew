@@ -103,7 +103,8 @@ class RolePermissionSeeder extends Seeder
                 'name' => 'user',
                 'description' => 'Regular user with limited access',
                 'permissions' => [
-                    'dashboard.view'
+                    'dashboard.view',
+                    'product.view'
                 ]
             ]
         ];
