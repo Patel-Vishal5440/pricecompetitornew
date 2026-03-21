@@ -1472,32 +1472,6 @@
             });
         }
 
-        function addLogoToPdf(doc, pageWidth, done) {
-            var logoUrl = "{{ asset('images/Mobilenzo_Logo_V3_1_.png') }}";
-            var logoImg = new Image();
-
-            logoImg.onload = function() {
-                try {
-                    var logoWidth = 52;
-                    var ratio = (logoImg.naturalHeight || 1) / (logoImg.naturalWidth || 1);
-                    var logoHeight = Math.max(8, logoWidth * ratio);
-                    var logoX = (pageWidth - logoWidth) / 2;
-                    var logoY = 8;
-
-                    doc.addImage(logoImg, 'PNG', logoX, logoY, logoWidth, logoHeight);
-                    done(logoY + logoHeight + 5);
-                } catch (e) {
-                    done(15);
-                }
-            };
-
-            logoImg.onerror = function() {
-                done(15);
-            };
-
-            logoImg.src = logoUrl;
-        }
-
         function exportToPdf(data) {
             try {
                 // Check if jsPDF is available - UMD version exports to window.jspdf
@@ -1543,21 +1517,22 @@
                 });
 
                 const pageWidth = doc.internal.pageSize.getWidth();
-                addLogoToPdf(doc, pageWidth, function(contentStartY) {
-                    // Add title and date centered under logo
-                    doc.setFontSize(16);
-                    doc.setFont(undefined, 'bold');
-                    const titleText = 'Products Export';
-                    const titleWidth = doc.getTextWidth(titleText);
-                    doc.text(titleText, (pageWidth - titleWidth) / 2, contentStartY);
+                const contentStartY = 15;
 
-                    doc.setFontSize(10);
-                    doc.setFont(undefined, 'normal');
-                    const dateText = 'Generated: ' + new Date().toLocaleDateString();
-                    const dateWidth = doc.getTextWidth(dateText);
-                    doc.text(dateText, (pageWidth - dateWidth) / 2, contentStartY + 7);
+                // Add centered title and date without logo.
+                doc.setFontSize(16);
+                doc.setFont(undefined, 'bold');
+                const titleText = 'Products Export';
+                const titleWidth = doc.getTextWidth(titleText);
+                doc.text(titleText, (pageWidth - titleWidth) / 2, contentStartY);
 
-                    var tableStartY = contentStartY + 13;
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'normal');
+                const dateText = 'Generated: ' + new Date().toLocaleDateString();
+                const dateWidth = doc.getTextWidth(dateText);
+                doc.text(dateText, (pageWidth - dateWidth) / 2, contentStartY + 7);
+
+                var tableStartY = contentStartY + 13;
 
                     // Add table using autoTable if available, otherwise use manual table
                     if (typeof doc.autoTable !== 'undefined') {
@@ -1633,11 +1608,10 @@
                         });
                     }
 
-                    // Save PDF
-                    var filename = 'products_' + new Date().toISOString().split('T')[0] + '.pdf';
-                    doc.save(filename);
-                    toastr.success('PDF exported successfully!');
-                });
+                // Save PDF
+                var filename = 'products_' + new Date().toISOString().split('T')[0] + '.pdf';
+                doc.save(filename);
+                toastr.success('PDF exported successfully!');
             } catch (error) {
                 console.error('PDF export error:', error);
                 toastr.error('Failed to generate PDF. Please try again.');
