@@ -8,6 +8,40 @@ use Symfony\Component\DomCrawler\Crawler;
 
 trait ScrapesCompetitorPrice
 {
+    private function parsePriceFromText(?string $text): ?string
+    {
+        if (!$text) {
+            return null;
+        }
+
+        // Normalize formatted prices like "$1,234.56".
+        $normalized = str_replace(',', '', $text);
+        if (preg_match('/([0-9]+(?:\.[0-9]{1,2})?)/', $normalized, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
+    }
+
+    private function extractPriceFromSelectors(Crawler $crawler, array $selectors): ?string
+    {
+        foreach ($selectors as $selector) {
+            try {
+                if ($crawler->filter($selector)->count() > 0) {
+                    $text = trim($crawler->filter($selector)->first()->text());
+                    $amount = $this->parsePriceFromText($text);
+                    if ($amount) {
+                        return $amount;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Ignore selector-specific failures and continue with fallback selectors.
+            }
+        }
+
+        return null;
+    }
+
     public function validateDomainMatch($providedUrl, $expectedWebsite): bool
     {
         if (!$expectedWebsite) {
@@ -33,6 +67,7 @@ trait ScrapesCompetitorPrice
         $html = null;
         $amount = null;
         $class = null;
+        $isMobileSentrix = str_contains($url, 'mobilesentrix.com');
 
         try {
             if (str_contains($url, 'injuredgadgets.com')) {
@@ -57,12 +92,34 @@ trait ScrapesCompetitorPrice
                     'Upgrade-Insecure-Requests' => '1',
                 ])->timeout(30)->get($url);
 
-                if (!$response->successful()) {
-                    Log::warning('HTTP request failed', ['url' => $url, 'status' => $response->status()]);
-                    return null;
-                }
+                $isCloudflareChallenge = $response->header('cf-mitigated') === 'challenge'
+                    || str_contains(strtolower((string) $response->body()), 'cf-challenge');
 
-                $html = $response->body();
+                if ((!$response->successful() || $isCloudflareChallenge) && $isMobileSentrix) {
+                    // MobileSentrix is frequently protected by Cloudflare challenge for server-side requests.
+                    // Use ScraperAPI fallback to fetch a challenge-bypassed HTML response.
+                    $scraperResponse = Http::timeout(45)->get('http://api.scraperapi.com', [
+                        'api_key' => env('CAPTCHA_API_KEY'),
+                        'url' => $url
+                    ]);
+
+                    if ($scraperResponse->successful()) {
+                        $html = $scraperResponse->body();
+                    } else {
+                        Log::warning('MobileSentrix ScraperAPI fallback failed', [
+                            'url' => $url,
+                            'status' => $scraperResponse->status()
+                        ]);
+                        return null;
+                    }
+                } else {
+                    if (!$response->successful()) {
+                        Log::warning('HTTP request failed', ['url' => $url, 'status' => $response->status()]);
+                        return null;
+                    }
+
+                    $html = $response->body();
+                }
             }
 
             if (empty($html)) {
@@ -73,12 +130,30 @@ trait ScrapesCompetitorPrice
             $crawler = new Crawler($html);
 
             if (str_contains($url, 'mobilesentrix.com')) {
-                $amount = $crawler->filter('.product-cart-pay')->attr('data-pp-amount');
+                // Primary source (legacy/current button attribute).
+                if ($crawler->filter('.product-cart-pay')->count() > 0) {
+                    $amount = $crawler->filter('.product-cart-pay')->first()->attr('data-pp-amount');
+                }
+
+                // Fallbacks for current PDP markup variants.
+                if (!$amount) {
+                    $amount = $this->extractPriceFromSelectors($crawler, [
+                        '.view-product-price .price-info-span',
+                        '.view-product-price .regular-price .price',
+                        '.view-product-price .price',
+                        '.product-info-price .price',
+                        '.product-info-main .price'
+                    ]);
+                }
             } elseif (str_contains($url, 'injuredgadgets.com')) {
-                $amount = $crawler->filter('.price-wrapper')->attr('data-price-amount');
+                if ($crawler->filter('.price-wrapper')->count() > 0) {
+                    $amount = $crawler->filter('.price-wrapper')->first()->attr('data-price-amount');
+                }
             } else {
                 $class = '.price-final_price';
-                $amount = $crawler->filter('.price-wrapper')->attr('data-price-amount');
+                if ($crawler->filter('.price-wrapper')->count() > 0) {
+                    $amount = $crawler->filter('.price-wrapper')->first()->attr('data-price-amount');
+                }
             }
 
             if (!$amount && isset($class) && $crawler->filter($class)->count() > 0) {

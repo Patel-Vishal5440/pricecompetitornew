@@ -48,7 +48,7 @@
                                         @enderror
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        @if (!isset($user))
+                                    @if (!isset($user))
                                             <label for="password" class="form-label">Password <span
                                                     class="text-danger">*</span></label>
                                             <input type="password"
@@ -60,8 +60,8 @@
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
                                         @endif
-                                    </div>
-                                    <div class="col-md-6 mb-3">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
                                         @if (!isset($user))
                                             <label for="password_confirmation" class="form-label">Confirm Password <span
                                                     class="text-danger">*</span></label>
@@ -69,7 +69,7 @@
                                                 name="password_confirmation" placeholder="Confirm password" required>
                                             <div class="invalid-feedback" id="password-confirmation-error"></div>
                                         @endif
-                                    </div>
+                                        </div>
                                     <div class="col-md-6 mb-3">
                                         <label for="role_id" class="form-label">Role</label>
                                         <select class="form-control @error('role_id') is-invalid @enderror" id="role_id"
@@ -255,8 +255,8 @@
                 if (!password) {
                     // On create page, password input has `required` attribute.
                     if (passwordInput.hasAttribute('required')) {
-                        showError(passwordInput, passwordError, 'Password is required');
-                        return false;
+                    showError(passwordInput, passwordError, 'Password is required');
+                    return false;
                     }
 
                     passwordStrength.innerHTML = '';

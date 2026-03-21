@@ -1438,78 +1438,78 @@ $(document).ready(function() {
             const pageWidth = doc.internal.pageSize.getWidth();
             addLogoToPdf(doc, pageWidth, function(contentStartY) {
                 // Add title and date centered under logo
-                doc.setFontSize(16);
-                doc.setFont(undefined, 'bold');
-                const titleText = 'Products Export';
-                const titleWidth = doc.getTextWidth(titleText);
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            const titleText = 'Products Export';
+            const titleWidth = doc.getTextWidth(titleText);
                 doc.text(titleText, (pageWidth - titleWidth) / 2, contentStartY);
-
-                doc.setFontSize(10);
-                doc.setFont(undefined, 'normal');
-                const dateText = 'Generated: ' + new Date().toLocaleDateString();
-                const dateWidth = doc.getTextWidth(dateText);
+            
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            const dateText = 'Generated: ' + new Date().toLocaleDateString();
+            const dateWidth = doc.getTextWidth(dateText);
                 doc.text(dateText, (pageWidth - dateWidth) / 2, contentStartY + 7);
 
                 var tableStartY = contentStartY + 13;
 
-                // Add table using autoTable if available, otherwise use manual table
-                if (typeof doc.autoTable !== 'undefined') {
-                    doc.autoTable({
-                        head: headers,
-                        body: tableData,
+            // Add table using autoTable if available, otherwise use manual table
+            if (typeof doc.autoTable !== 'undefined') {
+                doc.autoTable({
+                    head: headers,
+                    body: tableData,
                         startY: tableStartY,
                         styles: { fontSize: 7, cellPadding: 2, halign: 'center', valign: 'middle' },
                         headStyles: { fillColor: [66, 139, 202], textColor: 255, fontStyle: 'bold', halign: 'center' },
-                        alternateRowStyles: { fillColor: [245, 245, 245] },
+                    alternateRowStyles: { fillColor: [245, 245, 245] },
                         margin: { top: tableStartY, left: 14, right: 14 },
                         tableWidth: pageWidth - 28
-                    });
-                } else {
+                });
+            } else {
                     // Manual table creation without autoTable (centered table)
-                    doc.setFontSize(8);
+                doc.setFontSize(8);
                     var y = tableStartY;
                     var availableWidth = pageWidth - 28;
                     var colWidth = Math.min(35, availableWidth / headers[0].length);
                     var tableWidth = colWidth * headers[0].length;
                     var startX = (pageWidth - tableWidth) / 2;
-                    
-                    // Draw header background
-                    doc.setFillColor(66, 139, 202);
+                
+                // Draw header background
+                doc.setFillColor(66, 139, 202);
                     doc.rect(startX, y - 5, tableWidth, 6, 'F');
-                    
-                    // Header text
-                    doc.setTextColor(255, 255, 255);
-                    doc.setFont(undefined, 'bold');
-                    headers[0].forEach(function(header, i) {
+                
+                // Header text
+                doc.setTextColor(255, 255, 255);
+                doc.setFont(undefined, 'bold');
+                headers[0].forEach(function(header, i) {
                         doc.text(header.substring(0, 12), startX + (i * colWidth) + (colWidth / 2), y, { align: 'center' });
-                    });
-                    
-                    // Data rows
-                    doc.setTextColor(0, 0, 0);
-                    doc.setFont(undefined, 'normal');
-                    y += 8;
-                    tableData.forEach(function(row, rowIndex) {
-                        if (rowIndex % 2 === 0) {
-                            doc.setFillColor(245, 245, 245);
+                });
+                
+                // Data rows
+                doc.setTextColor(0, 0, 0);
+                doc.setFont(undefined, 'normal');
+                y += 8;
+                tableData.forEach(function(row, rowIndex) {
+                    if (rowIndex % 2 === 0) {
+                        doc.setFillColor(245, 245, 245);
                             doc.rect(startX, y - 4, tableWidth, 5, 'F');
-                        }
-                        
-                        row.forEach(function(cell, i) {
+                    }
+                    
+                    row.forEach(function(cell, i) {
                             doc.text(cell.toString().substring(0, 12), startX + (i * colWidth) + (colWidth / 2), y, { align: 'center' });
-                        });
-                        y += 6;
-                        
-                        if (y > 190) {
-                            doc.addPage();
-                            y = 20;
-                        }
                     });
-                }
+                    y += 6;
+                    
+                    if (y > 190) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                });
+            }
 
-                // Save PDF
-                var filename = 'products_' + new Date().toISOString().split('T')[0] + '.pdf';
-                doc.save(filename);
-                toastr.success('PDF exported successfully!');
+            // Save PDF
+            var filename = 'products_' + new Date().toISOString().split('T')[0] + '.pdf';
+            doc.save(filename);
+            toastr.success('PDF exported successfully!');
             });
         } catch (error) {
             console.error('PDF export error:', error);
