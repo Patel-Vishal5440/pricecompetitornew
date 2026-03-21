@@ -11,19 +11,25 @@
             <div class="card shadow rounded">
                 <div class="card-body p-4">
                     <div class="text-center mb-4">
+                        @php
+                            $defaultAvatar = asset('img/author/profile.png');
+                            $profileImage = route('profile.image.show', ['v' => optional($user->updated_at)->timestamp ?? now()->timestamp]);
+                        @endphp
                         <label for="file-upload" class="d-block cursor-pointer">
                             <img id="profile-image-preview"
-                                 src="{{ $user->profile_image ? asset('storage/' . $user->profile_image) : asset('img/author/profile.png') }}"
+                                 src="{{ $profileImage }}"
+                                 onerror="this.onerror=null;this.src='{{ $defaultAvatar }}';"
                                  class="rounded-circle"
                                  style="width: 120px; height: 120px; object-fit: cover;">
                             <div class="text-muted mt-2">Click to change</div>
                         </label>
-                        <input type="file" id="file-upload" name="profile_image" class="d-none" accept="image/*">
                     </div>
 
-                    <form method="POST" action="{{ route('profile.update') }}">
+                    <form method="POST" action="{{ route('profile.update') }}" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
+                        <input type="file" id="file-upload" name="profile_image" class="d-none" accept="image/*">
+                        <div id="profile-image-upload-msg" class="small mb-2 text-center text-muted"></div>
 
                         <div class="form-group">
                             <label>Name <span class="text-danger">*</span></label>
@@ -108,19 +114,41 @@ document.addEventListener("DOMContentLoaded", function () {
 
             fetch("{{ route('profile.image.update') }}", {
                 method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Accept": "application/json"
+                },
                 body: formData,
             })
-            .then(response => response.json())
+            .then(async response => {
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.message || (data.errors && Object.values(data.errors).flat().join(", ")) || "Image upload failed");
+                }
+                return data;
+            })
             .then(data => {
                 if (data.success) {
-                    console.log("Image updated:", data.image_url);
+                    previewImage.src = data.image_url;
+                    document.querySelectorAll('.profile-avatar-image').forEach(function (img) {
+                        img.src = data.image_url;
+                    });
+                    const msg = document.getElementById("profile-image-upload-msg");
+                    if (msg) {
+                        msg.className = "small mb-2 text-center text-success";
+                        msg.textContent = "Profile image updated successfully.";
+                    }
                 } else {
-                    alert(data.message || "Image upload failed");
+                    throw new Error(data.message || "Image upload failed");
                 }
             })
             .catch(error => {
-                console.error("Upload error:", error);
-                alert("An error occurred while uploading.");
+                const msg = document.getElementById("profile-image-upload-msg");
+                if (msg) {
+                    msg.className = "small mb-2 text-center text-danger";
+                    msg.textContent = error.message || "An error occurred while uploading image.";
+                }
             });
         }
     });

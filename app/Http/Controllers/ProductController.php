@@ -12,11 +12,11 @@ use App\Repositories\ProductRepository;
 use Illuminate\Support\Facades\Http;
 use App\Models\ProductCompetitorPrice;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Artisan;
 use App\Jobs\ScrapeCompetitorPrice;
 use App\Jobs\StoreOdooProducts;
 use App\Jobs\ProcessBulkProductImport;
+use App\Jobs\ProcessBulkPriceImport;
 use App\Models\ActivityFeed;
 use App\Models\BulkImportJob;
 use App\Models\User;
@@ -614,158 +614,49 @@ class ProductController extends Controller
      */
     public function importPriceUpdate(Request $request)
     {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:10240'
+        ]);
+
         try {
-            $validator = Validator::make($request->all(), [
-                'file' => 'required|file|mimes:csv,txt|max:10240'
+            $file = $request->file('file');
+            $storedPath = $file->store('imports');
+            $absolutePath = storage_path('app/' . $storedPath);
+            $totalRows = $this->countCsvDataRows($absolutePath);
+
+            $importJob = BulkImportJob::create([
+                'user_id' => Auth::id(),
+                'type' => 'price',
+                'status' => 'queued',
+                'total_rows' => $totalRows,
+                'processed_rows' => 0,
+                'success_count' => 0,
+                'failed_count' => 0,
+                'errors' => [],
+                'uploaded_file_path' => $storedPath,
+                'message' => 'Price import queued.',
             ]);
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed: ' . implode(', ', $validator->errors()->all())
-                ], 422);
-            }
-
-            $file = $request->file('file');
-            
-            if (!$file || !$file->isValid()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid file uploaded'
-                ], 400);
-            }
-
-            $path = $file->getRealPath();
-            
-            if (!file_exists($path) || !is_readable($path)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'File cannot be read. Please check file permissions.'
-                ], 400);
-            }
-            
-            $results = [
-                'success' => 0,
-                'failed' => 0,
-                'errors' => []
-            ];
-
-            $handle = fopen($path, 'r');
-            if ($handle === false) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to open CSV file. Please ensure the file is a valid CSV format.'
-                ], 400);
-            }
-
-            // Read header row and handle BOM
-            $header = fgetcsv($handle);
-            if ($header && !empty($header[0])) {
-                // Remove BOM if present
-                $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
-            }
-            $rowNumber = 1;
-
-            while (($row = fgetcsv($handle)) !== false) {
-                $rowNumber++;
-                
-                // Skip empty rows
-                if (empty(array_filter($row))) {
-                    continue;
-                }
-                
-                if (count($row) < 2) {
-                    $results['failed']++;
-                    $results['errors'][] = "Row {$rowNumber}: Insufficient columns (expected: SKU, Price). Found: " . count($row) . " columns";
-                    continue;
-                }
-
-                // Remove BOM from first column if present
-                $row[0] = preg_replace('/^\xEF\xBB\xBF/', '', $row[0]);
-                $sku = trim($row[0]);
-                $price = trim($row[1]);
-
-                if (empty($sku)) {
-                    $results['failed']++;
-                    $results['errors'][] = "Row {$rowNumber}: SKU is required";
-                    continue;
-                }
-
-                if (empty($price) || !is_numeric($price) || $price < 0) {
-                    $results['failed']++;
-                    $results['errors'][] = "Row {$rowNumber}: Valid price is required";
-                    continue;
-                }
-
-                // Find product by SKU
-                $product = Product::where('default_code', $sku)->first();
-                
-                if (!$product || !$product->odoo_id) {
-                    $results['failed']++;
-                    $results['errors'][] = "Row {$rowNumber}: Product with SKU '{$sku}' not found or has no Odoo ID";
-                    continue;
-                }
-
-                // Update price in Odoo
-                try {
-                    $response = $this->odooService->updateProductPrice($product->odoo_id, (float)$price);
-                    
-                    if (isset($response['success']) && $response['success']) {
-                        // Update local database
-                        $product->update(['list_price' => (float)$price]);
-                        $results['success']++;
-                    } else {
-                        $results['failed']++;
-                        $errorMsg = $response['message'] ?? ($response['error'] ?? 'Unknown error');
-                        $results['errors'][] = "Row {$rowNumber}: Failed to update price for SKU '{$sku}' - " . $errorMsg;
-                        Log::warning("Price update failed for SKU: {$sku}", [
-                            'odoo_id' => $product->odoo_id,
-                            'price' => $price,
-                            'response' => $response
-                        ]);
-                    }
-                } catch (\Exception $e) {
-                    $results['failed']++;
-                    $results['errors'][] = "Row {$rowNumber}: Exception updating price for SKU '{$sku}' - " . $e->getMessage();
-                    Log::error("Price update exception for SKU: {$sku}", [
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
-                    ]);
-                }
-            }
-
-            fclose($handle);
+            ProcessBulkPriceImport::dispatch($importJob->id, $storedPath);
 
             return response()->json([
                 'success' => true,
-                'message' => "Import completed. Success: {$results['success']}, Failed: {$results['failed']}",
-                'results' => $results
+                'message' => 'Price import queued successfully. Processing started in background.',
+                'import_job' => $this->formatImportJobResponse($importJob)
             ]);
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            $errors = $e->validator->errors()->all();
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error: ' . implode(', ', $errors)
-            ], 422);
         } catch (\Exception $e) {
             Log::error('Import Price Update Error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
-            $errorMessage = 'Failed to import prices';
-            if (strpos($e->getMessage(), 'file') !== false) {
-                $errorMessage = 'File processing error: ' . $e->getMessage();
-            } elseif (strpos($e->getMessage(), 'database') !== false || strpos($e->getMessage(), 'SQL') !== false) {
-                $errorMessage = 'Database error occurred. Please try again later.';
-            } elseif (strpos($e->getMessage(), 'connection') !== false || strpos($e->getMessage(), 'timeout') !== false) {
-                $errorMessage = 'Connection error. Please check your network and try again.';
+
+            if (!empty($storedPath ?? null)) {
+                Storage::disk('local')->delete($storedPath);
             }
-            
+
             return response()->json([
                 'success' => false,
-                'message' => $errorMessage
+                'message' => 'Failed to queue price import: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -859,6 +750,135 @@ class ProductController extends Controller
         ]);
     }
 
+    public function priceImportStatus(int $id)
+    {
+        $importJob = BulkImportJob::where('type', 'price')->findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'import_job' => $this->formatImportJobResponse($importJob),
+        ]);
+    }
+
+    public function priceImportJobs(Request $request)
+    {
+        $showAll = $request->boolean('all', false);
+        $limit = (int) $request->get('limit', 10);
+        $limit = max(1, min(500, $limit));
+
+        $jobsQuery = BulkImportJob::where('type', 'price')
+            ->orderByDesc('id');
+
+        if (!$showAll) {
+            $jobsQuery->limit($limit);
+        }
+
+        $jobs = $jobsQuery->get()
+            ->map(function ($job) {
+                return $this->formatImportJobResponse($job);
+            });
+
+        return response()->json([
+            'success' => true,
+            'jobs' => $jobs,
+        ]);
+    }
+
+    public function importStatusJobs(Request $request)
+    {
+        if ($request->has('draw')) {
+            $draw = (int) $request->get('draw', 1);
+            $start = max(0, (int) $request->get('start', 0));
+            $length = max(1, min(100, (int) $request->get('length', 10)));
+            $type = trim((string) $request->get('import_type', ''));
+            $search = trim((string) $request->get('searchData', ''));
+
+            $baseQuery = BulkImportJob::query();
+            if (in_array($type, ['products', 'price'], true)) {
+                $baseQuery->where('type', $type);
+            }
+
+            $filteredQuery = clone $baseQuery;
+            if ($search !== '') {
+                $filteredQuery->where(function ($q) use ($search) {
+                    $q->where('status', 'like', '%' . $search . '%')
+                        ->orWhere('message', 'like', '%' . $search . '%')
+                        ->orWhere('type', 'like', '%' . $search . '%');
+
+                    if (preg_match('/^\d+$/', $search)) {
+                        $q->orWhere('id', (int) $search);
+                    }
+                });
+            }
+
+            $recordsTotal = (clone $baseQuery)->count();
+            $recordsFiltered = (clone $filteredQuery)->count();
+
+            $jobs = $filteredQuery
+                ->orderByDesc('id')
+                ->skip($start)
+                ->take($length)
+                ->get()
+                ->map(function ($job) {
+                    return $this->formatImportJobResponse($job);
+                })
+                ->values();
+
+            return response()->json([
+                'draw' => $draw,
+                'recordsTotal' => (int) $recordsTotal,
+                'recordsFiltered' => (int) $recordsFiltered,
+                'data' => $jobs,
+            ]);
+        }
+
+        $type = trim((string) $request->get('type', ''));
+        $search = trim((string) $request->get('search', ''));
+        $page = max(1, (int) $request->get('page', 1));
+        $perPage = max(1, min(100, (int) $request->get('per_page', 10)));
+
+        $jobsQuery = BulkImportJob::query()->orderByDesc('id');
+
+        if (in_array($type, ['products', 'price'], true)) {
+            $jobsQuery->where('type', $type);
+        }
+
+        if ($search !== '') {
+            $jobsQuery->where(function ($q) use ($search) {
+                $q->where('status', 'like', '%' . $search . '%')
+                    ->orWhere('message', 'like', '%' . $search . '%')
+                    ->orWhere('type', 'like', '%' . $search . '%');
+
+                if (preg_match('/^\d+$/', $search)) {
+                    $q->orWhere('id', (int) $search);
+                }
+            });
+        }
+
+        $total = (int) $jobsQuery->count();
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = min($page, $lastPage);
+
+        $jobs = $jobsQuery
+            ->forPage($page, $perPage)
+            ->get()
+            ->map(function ($job) {
+                return $this->formatImportJobResponse($job);
+            })
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'jobs' => $jobs,
+            'pagination' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+                'last_page' => $lastPage,
+            ],
+        ]);
+    }
+
     private function countCsvDataRows(string $absolutePath): int
     {
         $count = 0;
@@ -890,6 +910,8 @@ class ProductController extends Controller
 
         return [
             'id' => $job->id,
+            'type' => $job->type,
+            'type_label' => $job->type === 'price' ? 'Product Price Update' : 'Product Import',
             'status' => $job->status,
             'total_rows' => $totalRows,
             'processed_rows' => $processedRows,

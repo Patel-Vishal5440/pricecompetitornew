@@ -23,19 +23,36 @@
                     </a>
                 </li>
                 <!-- ends: .nav-flag-select -->
+                @php
+                    $user = Auth::user();
+                    $userName = $user->name ?? 'User';
+                    $userEmail = $user->email ?? '';
+                    $userInitials = collect(explode(' ', trim($userName)))
+                        ->filter()
+                        ->take(2)
+                        ->map(fn($part) => strtoupper(substr($part, 0, 1)))
+                        ->implode('');
+                    $defaultAvatar = asset('img/author/profile.png');
+                    $hasProfileImage = !empty($user?->profile_image);
+                    $profileImage = route('profile.image.show', ['v' => optional($user?->updated_at)->timestamp ?? now()->timestamp]);
+                @endphp
                 <li class="nav-author">
                     <div class="dropdown-custom">
-                        {{-- @dd(Auth::user()->profile_image) --}}
-                        <a href="javascript:;" class="nav-item-toggle circle"><img class="rounded-circle" src="{{ Auth::user()->profile_image ? asset('storage/' . Auth::user()->profile_image) : asset('img/author/profile.png') }}"
-                                                                            alt="" class="rounded-circle"></a>
+                        <a href="javascript:;" class="nav-item-toggle circle profile-avatar-trigger">
+                            <img class="rounded-circle profile-avatar-image {{ $hasProfileImage ? '' : 'is-default-logo' }}"
+                                src="{{ $profileImage }}"
+                                onerror="this.onerror=null;this.src='{{ $defaultAvatar }}';"
+                                alt="{{ $userName }}">
+                            <span class="profile-avatar-fallback">{{ $userInitials ?: 'U' }}</span>
+                        </a>
                         <div class="dropdown-wrapper">
                             <div class="nav-author__info">
                                 <div class="author-img">
-                                    <img src="{{ Auth::user()->profile_image ? asset('storage/' . Auth::user()->profile_image) : asset('img/author/profile.png') }}" alt="" class="rounded-circle">
+                                    <img src="{{ $profileImage }}" onerror="this.onerror=null;this.src='{{ $defaultAvatar }}';" alt="{{ $userName }}" class="rounded-circle profile-dropdown-image {{ $hasProfileImage ? '' : 'is-default-logo' }}">
                                 </div>
                                 <div>
-                                    <h6>{{ Auth::user()->name }}</h6>
-                                    <span>{{ Auth::user()->email }}</span>
+                                    <h6>{{ $userName }}</h6>
+                                    <span>{{ $userEmail }}</span>
                                 </div>
                             </div>
                             <div class="nav-author__options">
@@ -70,3 +87,67 @@
         <!-- ends: .navbar-right -->
     </nav>
 </header>
+<style>
+    .profile-avatar-trigger {
+        position: relative;
+        width: 34px;
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        overflow: hidden;
+        background: #0d6efd;
+    }
+
+    .profile-avatar-image {
+        width: 34px;
+        height: 34px;
+        object-fit: cover;
+        display: block;
+        position: relative;
+        z-index: 2;
+    }
+
+    .profile-avatar-image.is-default-logo { object-fit: cover; background: transparent; padding: 0; }
+
+    .profile-dropdown-image {
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px;
+        min-height: 44px;
+        object-fit: cover;
+        display: block;
+    }
+
+    .profile-dropdown-image.is-default-logo {
+        object-fit: cover;
+        background: transparent;
+        padding: 0;
+    }
+
+    .profile-avatar-fallback {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    /* Keep dropdown user info clean and aligned */
+    .dropdown-wrapper .nav-author__info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .dropdown-wrapper .nav-author__info .author-img {
+        margin-right: 0;
+        flex-shrink: 0;
+    }
+</style>

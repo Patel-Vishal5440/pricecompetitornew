@@ -222,6 +222,15 @@
         margin-top: 0;
     }
 
+    .product-name-cell {
+        display: inline-block;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: help;
+    }
+
     @media (max-width: 992px) {
         .toolbar-inner {
             gap: 0.75rem !important;
@@ -971,7 +980,12 @@
                     data: 'name',
                     name: 'name',
                     className: 'text-start mobilenzo-column',
-                    width: '250px'
+                    width: '250px',
+                    render: function(data) {
+                        const fullName = String(data || '');
+                        const safeName = escapeHtml(fullName);
+                        return `<span class="product-name-cell" data-bs-toggle="tooltip" data-bs-placement="top" title="${safeName}">${safeName}</span>`;
+                    }
                 },
                 {
                     data: 'default_code',
@@ -2286,70 +2300,15 @@
                     $btn.prop('disabled', false).html('Import Prices');
 
                     if (response.success) {
-                        if (response.results.success > 0) {
-                            toastr.success(response.message);
-                        } else {
-                            toastr.warning(response.message);
-                        }
-
-                        // Show results with better UI
-                        let resultsHtml = '<div class="row g-3">';
-
-                        // Success count
-                        if (response.results.success > 0) {
-                            resultsHtml += '<div class="col-12">';
-                            resultsHtml += '<div class="alert alert-success d-flex align-items-center mb-0" style="border-left: 4px solid #28a745;">';
-                            resultsHtml += '<i class="fas fa-check-circle me-2" style="font-size: 1.2rem;"></i>';
-                            resultsHtml += '<div><strong>Success:</strong> ' + response.results.success + ' price(s) updated successfully</div>';
-                            resultsHtml += '</div></div>';
-                        }
-
-                        // Failed count
-                        if (response.results.failed > 0) {
-                            resultsHtml += '<div class="col-12">';
-                            resultsHtml += '<div class="alert alert-danger d-flex align-items-center mb-0" style="border-left: 4px solid #dc3545;">';
-                            resultsHtml += '<i class="fas fa-exclamation-circle me-2" style="font-size: 1.2rem;"></i>';
-                            resultsHtml += '<div><strong>Failed:</strong> ' + response.results.failed + ' price(s) failed to update</div>';
-                            resultsHtml += '</div></div>';
-                        }
-
-                        // Error details
-                        if (response.results.errors && response.results.errors.length > 0) {
-                            resultsHtml += '<div class="col-12">';
-                            resultsHtml += '<div class="alert alert-warning mb-0" style="border-left: 4px solid #ffc107;">';
-                            resultsHtml += '<div class="d-flex align-items-center mb-2">';
-                            resultsHtml += '<i class="fas fa-exclamation-triangle me-2" style="font-size: 1.1rem;"></i>';
-                            resultsHtml += '<strong>Error Details (' + response.results.errors.length + '):</strong>';
-                            resultsHtml += '</div>';
-                            resultsHtml += '<div style="max-height: 250px; overflow-y: auto; background: #fff; border-radius: 4px; padding: 0.75rem;">';
-                            resultsHtml += '<ul class="mb-0" style="list-style: none; padding-left: 0;">';
-                            response.results.errors.forEach(function(error, index) {
-                                resultsHtml += '<li class="mb-2 pb-2" style="border-bottom: ' + (index < response.results.errors.length - 1 ? '1px solid #e9ecef' : 'none') + ';">';
-                                resultsHtml += '<span class="badge bg-secondary me-2" style="font-size: 0.75rem;">Row</span>';
-                                resultsHtml += '<span style="font-size: 0.875rem; color: #495057;">' + error + '</span>';
-                                resultsHtml += '</li>';
-                            });
-                            resultsHtml += '</ul></div></div></div>';
-                        }
-
-                        resultsHtml += '</div>';
-
-                        $('#priceUpdateResultsContent').html(resultsHtml);
-                        $('#priceUpdateImportResults').show();
-
-                        // Reload table
-                        table.ajax.reload(null, false);
+                        toastr.success(response.message || 'Price import queued. Check Import Status.');
+                        $('#importPriceUpdateModal').modal('hide');
+                        setTimeout(function() {
+                            window.location.href = "{{ route('products.import-status') }}";
+                        }, 300);
                     } else {
                         toastr.error(response.message || 'Import failed');
-                        if (response.results && response.results.errors && response.results.errors.length > 0) {
-                            let errorHtml = '<div class="alert alert-danger"><strong>Errors:</strong><ul class="mb-0 mt-2">';
-                            response.results.errors.forEach(function(error) {
-                                errorHtml += '<li>' + error + '</li>';
-                            });
-                            errorHtml += '</ul></div>';
-                            $('#priceUpdateResultsContent').html(errorHtml);
-                            $('#priceUpdateImportResults').show();
-                        }
+                        $('#priceUpdateResultsContent').html('<div class="alert alert-danger mb-0">' + escapeHtml(response.message || 'Import failed') + '</div>');
+                        $('#priceUpdateImportResults').show();
                     }
                 },
                 error: function(xhr) {

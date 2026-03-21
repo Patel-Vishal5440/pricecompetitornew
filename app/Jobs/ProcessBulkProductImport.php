@@ -22,7 +22,7 @@ class ProcessBulkProductImport implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, ScrapesCompetitorPrice;
 
     public $timeout = 3600;
-    public $tries = 1;
+    public $tries = 3;
 
     private int $importJobId;
     private string $filePath;
@@ -45,6 +45,7 @@ class ProcessBulkProductImport implements ShouldQueue
         if (!$importJob) {
             return;
         }
+        $rowDelayMicroseconds = $this->getRowDelayMicroseconds((int) $importJob->total_rows);
 
         $importJob->update([
             'status' => 'processing',
@@ -263,9 +264,13 @@ class ProcessBulkProductImport implements ShouldQueue
             }
 
             $this->syncProgress($importJob, $processedRows, $results);
+            if ($rowDelayMicroseconds > 0) {
+                usleep($rowDelayMicroseconds);
+            }
         }
 
         fclose($handle);
+        $this->syncProgress($importJob, $processedRows, $results, true);
 
         $importJob->update([
             'status' => 'completed',
@@ -294,13 +299,52 @@ class ProcessBulkProductImport implements ShouldQueue
         ]);
     }
 
-    private function syncProgress(BulkImportJob $importJob, int $processedRows, array $results): void
+    private function syncProgress(BulkImportJob $importJob, int $processedRows, array $results, bool $force = false): void
     {
+        if (!$force && !$this->shouldSyncProgress($processedRows)) {
+            return;
+        }
+
         $importJob->update([
             'processed_rows' => $processedRows,
             'success_count' => $results['success'],
             'failed_count' => $results['failed'],
             'errors' => $results['errors'],
         ]);
+    }
+
+    private function shouldSyncProgress(int $processedRows): bool
+    {
+        if ($processedRows <= 0) {
+            return false;
+        }
+
+        $everyRows = max(1, (int) env('IMPORT_PROGRESS_SYNC_EVERY_ROWS', 25));
+        return $processedRows % $everyRows === 0;
+    }
+
+    private function getRowDelayMicroseconds(int $totalRows = 0): int
+    {
+        $baseDelayMs = (int) env('PRODUCT_IMPORT_ROW_DELAY_MS', env('IMPORT_ROW_DELAY_MS', 75));
+        $mediumDelayMs = (int) env('PRODUCT_IMPORT_ROW_DELAY_MS_MEDIUM', $baseDelayMs + 25);
+        $largeDelayMs = (int) env('PRODUCT_IMPORT_ROW_DELAY_MS_LARGE', $baseDelayMs + 50);
+
+        $mediumRowsStart = max(1, (int) env('IMPORT_MEDIUM_ROWS_START', 1000));
+        $largeRowsStart = max($mediumRowsStart + 1, (int) env('IMPORT_LARGE_ROWS_START', 1500));
+
+        if ($totalRows >= $largeRowsStart) {
+            $delayMs = $largeDelayMs;
+        } elseif ($totalRows >= $mediumRowsStart) {
+            $delayMs = $mediumDelayMs;
+        } else {
+            $delayMs = $baseDelayMs;
+        }
+
+        return max(0, $delayMs) * 1000;
+    }
+
+    public function backoff(): int
+    {
+        return max(1, (int) env('IMPORT_JOB_RETRY_DELAY_SECONDS', 10));
     }
 }

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ProfileController extends Controller
 {
@@ -44,9 +45,22 @@ class ProfileController extends Controller
                 'company_name' => ['nullable', 'string', 'max:255'],
                 'website' => ['nullable', 'url', 'max:255'],
                 'bio' => ['nullable', 'string'],
+                'profile_image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
             ]);
 
             $user->fill($validated);
+
+            if ($request->hasFile('profile_image')) {
+                $file = $request->file('profile_image');
+                $path = $file->store('profile_images', 'public');
+
+                if ($user->profile_image && Storage::disk('public')->exists($user->profile_image)) {
+                    Storage::disk('public')->delete($user->profile_image);
+                }
+
+                $user->profile_image = $path;
+            }
+
             $user->save();
 
             return Redirect::route('products.list')->with('status', 'profile-updated');
@@ -98,7 +112,7 @@ class ProfileController extends Controller
                 }
                 $user->profile_image = $path;
                 $user->save();
-                return response()->json(['success' => true, 'image_url' => asset('storage/' . $path)]);
+                return response()->json(['success' => true, 'image_url' => route('profile.image.show', ['v' => now()->timestamp])]);
             }
             return response()->json(['success' => false, 'message' => 'No file uploaded.'], 400);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -106,6 +120,28 @@ class ProfileController extends Controller
                 'success' => false,
                 'errors' => $e->errors()
             ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to update profile image right now.'
+            ], 500);
         }
+    }
+
+    /**
+     * Serve logged-in user's profile image with default fallback.
+     */
+    public function showImage(Request $request): BinaryFileResponse
+    {
+        $user = $request->user();
+        $defaultAvatar = public_path('img/author/profile.png');
+
+        if (!empty($user->profile_image) && Storage::disk('public')->exists($user->profile_image)) {
+            $path = storage_path('app/public/' . $user->profile_image);
+            $mime = mime_content_type($path) ?: 'application/octet-stream';
+            return response()->file($path, ['Content-Type' => $mime]);
+        }
+
+        return response()->file($defaultAvatar, ['Content-Type' => 'image/png']);
     }
 }

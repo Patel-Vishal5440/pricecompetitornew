@@ -47,6 +47,7 @@ Route::group(['middleware' => 'auth'], function () {
     // Profile routes
     Route::group(['prefix' => 'profile'], function () {
         Route::get('/edit', [ProfileController::class, 'profileSetting'])->name('profile.edit');
+        Route::get('/image', [ProfileController::class, 'showImage'])->name('profile.image.show');
         Route::put('/update', [ProfileController::class, 'update'])->name('profile.update');
         Route::put('/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
         Route::post('/image/update', [ProfileController::class, 'updateImage'])
@@ -121,6 +122,7 @@ Route::group(['middleware' => 'auth'], function () {
     Route::group(['prefix' => 'products'], function () {
         Route::get('/list', [ProductController::class, 'index'])->name('products.list');
         Route::get('/import-status', [ProductController::class, 'importStatusPage'])->name('products.import-status');
+        Route::get('/import-status/jobs', [ProductController::class, 'importStatusJobs'])->name('products.importStatusJobs');
         Route::post('/store', [ProductController::class, 'store'])->name('products.store');
         Route::post('/add-link', [ProductController::class, 'addLink'])
         ->name('products.addLink');
@@ -134,6 +136,8 @@ Route::group(['middleware' => 'auth'], function () {
         // Route::get('/sync-products', [ProductController::class, 'syncProducts']);
         Route::get('/sync-products', [ProductController::class, 'syncProducts'])->name('products.syncProducts');
         Route::post('/import-price-update', [ProductController::class, 'importPriceUpdate'])->name('products.importPriceUpdate');
+        Route::get('/import-price-update/status/{id}', [ProductController::class, 'priceImportStatus'])->name('products.priceImportStatus');
+        Route::get('/import-price-update/jobs', [ProductController::class, 'priceImportJobs'])->name('products.priceImportJobs');
         Route::post('/import-bulk-products', [ProductController::class, 'importBulkProducts'])->name('products.importBulkProducts');
         Route::get('/import-bulk-products/status/{id}', [ProductController::class, 'bulkImportStatus'])->name('products.bulkImportStatus');
         Route::get('/import-bulk-products/jobs', [ProductController::class, 'bulkImportJobs'])->name('products.bulkImportJobs');
