@@ -126,12 +126,15 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/store', [ProductController::class, 'store'])->name('products.store');
         Route::post('/add-link', [ProductController::class, 'addLink'])
         ->name('products.addLink');
+        Route::post('/remove-link', [ProductController::class, 'removeLink'])
+        ->name('products.removeLink');
         Route::post('/update-price', [ProductController::class, 'updatePrice'])
             ->name('products.updatePrice');
         Route::post('/update', [ProductController::class, 'update'])->name('products.update');
         Route::get('/get-competitor-urls', [ProductController::class, 'getCompetitorUrls'])->name('products.getCompetitorUrls');
         Route::get('/sync-specific', [ProductController::class, 'syncSpecificProduct'])->name('products.sync-specific');
         Route::post('/bulk-sync-pricing', [ProductController::class, 'bulkSyncPricing'])->name('products.bulkSyncPricing');
+        Route::post('/bulk-assign-category', [ProductController::class, 'bulkAssignCategory'])->name('products.bulkAssignCategory');
         Route::post('/bulk-delete', [ProductController::class, 'bulkDelete'])->name('products.bulkDelete');
         // Route::get('/sync-products', [ProductController::class, 'syncProducts']);
         Route::get('/sync-products', [ProductController::class, 'syncProducts'])->name('products.syncProducts');

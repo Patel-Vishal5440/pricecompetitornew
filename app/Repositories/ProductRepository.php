@@ -133,9 +133,19 @@ class ProductRepository
 
         // Handle price sorting by competitor price (after select)
         if ($priceSort && $competitorId) {
-            $product->orderBy('product_competitor_prices.price', $priceSort === 'high_to_low' ? 'desc' : 'asc');
+            // Ensure numeric sorting and push NULLs last
+            if ($priceSort === 'high_to_low') {
+                $product->orderByRaw('product_competitor_prices.price IS NULL ASC, CAST(product_competitor_prices.price AS DECIMAL(15,4)) DESC');
+            } else {
+                $product->orderByRaw('product_competitor_prices.price IS NULL ASC, CAST(product_competitor_prices.price AS DECIMAL(15,4)) ASC');
+            }
         } elseif ($productPriceSort) {
-            $product->orderBy('products.list_price', $productPriceSort === 'high_to_low' ? 'desc' : 'asc');
+            // Ensure numeric sorting and push NULLs last
+            if ($productPriceSort === 'high_to_low') {
+                $product->orderByRaw('products.list_price IS NULL ASC, CAST(products.list_price AS DECIMAL(15,4)) DESC');
+            } else {
+                $product->orderByRaw('products.list_price IS NULL ASC, CAST(products.list_price AS DECIMAL(15,4)) ASC');
+            }
         } else {
             // Default ordering if no price sort is applied
             $product->latest('id');

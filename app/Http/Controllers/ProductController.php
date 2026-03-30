@@ -121,8 +121,9 @@ class ProductController extends Controller
             'category_id' => 'nullable|integer|exists:categories,id',
             'list_price' => 'nullable|numeric|min:0',
             'competitor_urls' => 'nullable|array',
-            'competitor_urls.*.competitor_id' => 'required_with:competitor_urls.*.competitor_url|integer|exists:competitors,id',
-            'competitor_urls.*.competitor_url' => 'required_with:competitor_urls.*.competitor_id|url'
+            // Allow sending competitor_id with empty URL to clear it
+            'competitor_urls.*.competitor_id' => 'required|integer|exists:competitors,id',
+            'competitor_urls.*.competitor_url' => 'nullable|url'
         ]);
 
         try {
@@ -433,6 +434,58 @@ class ProductController extends Controller
         ]);
     }
 
+    public function bulkAssignCategory(Request $request)
+    {
+        $validated = $request->validate([
+            'product_ids' => 'required|array|min:1',
+            'product_ids.*' => 'integer|exists:products,id',
+            'category_id' => 'nullable|integer|exists:categories,id',
+            'clear' => 'nullable|boolean'
+        ]);
+
+        try {
+            $clear = (bool) ($validated['clear'] ?? false);
+            $updateData = [];
+
+            if ($clear) {
+                $updateData['category_id'] = null;
+                $updateData['category'] = null;
+            } else {
+                $category = null;
+                if (!empty($validated['category_id'])) {
+                    $category = Category::find($validated['category_id']);
+                }
+                if (!$category) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Selected category not found.'
+                    ], 422);
+                }
+                $updateData['category_id'] = $category->id;
+                $updateData['category'] = $category->name;
+            }
+
+            $affected = Product::whereIn('id', $validated['product_ids'])->update($updateData);
+
+            return response()->json([
+                'success' => true,
+                'message' => $clear
+                    ? "Cleared category for {$affected} product(s)."
+                    : "Assigned category to {$affected} product(s).",
+                'updated_count' => $affected
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Bulk Assign Category Error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Bulk category assignment failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -600,6 +653,36 @@ class ProductController extends Controller
                 'product_id' => $validated['product_id'],
                 'competitor_id' => $validated['competitor_id'],
                 'url' => $validated['competitor_url']
+            ]);
+            return response()->json(['success' => false, 'message' => 'Internal server error'], 500);
+        }
+    }
+
+    public function removeLink(Request $request)
+    {
+        $validated = $request->validate([
+            'product_id' => 'required|integer|exists:products,id',
+            'competitor_id' => 'required|integer|exists:competitors,id',
+        ]);
+
+        try {
+            $record = ProductCompetitorPrice::where('product_id', $validated['product_id'])
+                ->where('competitor_id', $validated['competitor_id'])
+                ->first();
+
+            if ($record) {
+                $record->update(['competitor_url' => null, 'price' => null]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Competitor link and price cleared'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('removeLink Error', [
+                'error' => $e->getMessage(),
+                'product_id' => $validated['product_id'] ?? null,
+                'competitor_id' => $validated['competitor_id'] ?? null
             ]);
             return response()->json(['success' => false, 'message' => 'Internal server error'], 500);
         }

@@ -387,6 +387,9 @@
                                             <button type="button" class="btn btn-danger btn-sm toolbar-btn" id="bulkDeleteBtn">
                                                 <i class="fas fa-trash-alt me-1"></i> Delete
                                             </button>
+                                            <button type="button" class="btn btn-warning btn-sm toolbar-btn text-dark" id="bulkAssignCategoryBtn" title="Assign a category to selected products">
+                                                <i class="fas fa-tags me-1"></i> Assign Category
+                                            </button>
                                             <button type="button" class="btn btn-light btn-sm toolbar-btn" id="clearBulkSelectionBtn">
                                                 Clear Selection
                                             </button>
@@ -461,6 +464,47 @@
         </div>
     </div>
 </div>
+
+{{-- Modal for bulk assign category --}}
+<div class="modal fade modal-themed" id="bulkAssignCategoryModal" tabindex="-1" role="dialog" aria-labelledby="bulkAssignCategoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-tags me-2"></i>Assign Category to Selected
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label for="bulkAssignCategorySelect" class="form-label fw-semibold">Category</label>
+                    <select class="form-select" id="bulkAssignCategorySelect">
+                        <option value="">Select Category</option>
+                        @foreach($categories as $category)
+                        <option value="{{ $category->id }}">{{ $category->name }}</option>
+                        @endforeach
+                    </select>
+                    <div id="bulkAssignCategoryError" class="invalid-feedback" style="display:none;"></div>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="1" id="bulkClearCategory">
+                    <label class="form-check-label" for="bulkClearCategory">
+                        Clear category (set to none) for selected products
+                    </label>
+                </div>
+                <small class="form-text text-muted d-block mt-2">
+                    <i class="fas fa-info-circle me-1"></i>If "Clear category" is checked, the category selection will be ignored.
+                </small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmBulkAssignCategoryBtn">Apply</button>
+            </div>
+        </div>
+    </div>
+    </div>
 
 {{-- Modal for adding product --}}
 <div class="modal fade modal-themed" id="addProductModal" tabindex="-1" role="dialog" aria-labelledby="addProductModalLabel" aria-hidden="true">
@@ -927,12 +971,53 @@
             $('.product-table-count-info').html(countText);
         }
 
+        // Track a user-entered manual page length (overrides auto behavior if set)
+        let manualPageLength = null;
+
+        function getAutoPageLength() {
+            return $('#filterCategory').val() ? 100 : 10;
+        }
+
+        function ensureManualLengthControl() {
+            const $bottom = $('.bottom.d-flex.justify-content-between.align-items-center.flex-wrap.gap-2');
+            if (!$bottom.length) return;
+            if ($('#manualPageLengthWrapper').length) return;
+
+            const controlHtml = `
+                <div id="manualPageLengthWrapper" class="d-flex align-items-center gap-2">
+                    <label for="manualPageLengthInput" class="small text-muted mb-0">Max rows</label>
+                    <input type="number" min="-1" step="1" id="manualPageLengthInput" class="form-control form-control-sm" style="width: 100px;" placeholder="${getAutoPageLength()}">
+                    <button type="button" id="applyManualPageLengthBtn" class="btn btn-sm btn-outline-primary">Apply</button>
+                </div>
+            `;
+            // Insert before pagination controls
+            $bottom.find('.dataTables_paginate').before(controlHtml);
+
+            // Wire events
+            $(document).on('click', '#applyManualPageLengthBtn', function() {
+                const val = parseInt($('#manualPageLengthInput').val(), 10);
+                if (isNaN(val) || (val !== -1 && val <= 0)) {
+                    toastr.warning('Enter a valid number (-1 for All, or a positive integer).');
+                    return;
+                }
+                manualPageLength = val;
+                table.page.len(val).draw(false);
+            });
+            $(document).on('keypress', '#manualPageLengthInput', function(e) {
+                if (e.which === 13) {
+                    $('#applyManualPageLengthBtn').click();
+                }
+            });
+        }
+
         let table = $('#datatable').DataTable({
             processing: true,
             serverSide: true,
             searching: false,
             ordering: false,
             dom: 'rt<"bottom d-flex justify-content-between align-items-center flex-wrap gap-2"l<"product-table-count-info text-center flex-grow-1 small fw-semibold text-primary">p><"clear">',
+            pageLength: getAutoPageLength(),
+            lengthMenu: [[10, 25, 50, 100, 200, 500, -1], [10, 25, 50, 100, 200, 500, 'All']],
             language: {
                 emptyTable: `<div class="py-4 text-center text-muted">
                 <i class="fas fa-box-open fa-2x mb-2"></i><br>
@@ -964,6 +1049,7 @@
                 syncSelectAllState();
                 updateBulkActionBar();
                 updateProductCountInfo(this.api());
+                ensureManualLengthControl();
             },
             columns: [{
                     data: 'id',
@@ -1217,9 +1303,68 @@
             });
         });
 
+        // Bulk Assign Category - open modal
+        $(document).on('click', '#bulkAssignCategoryBtn', function() {
+            const ids = getSelectedProductIds();
+            if (!ids.length) {
+                toastr.warning('Please select at least one product.');
+                return;
+            }
+            // Reset modal state
+            $('#bulkAssignCategorySelect').val('');
+            $('#bulkClearCategory').prop('checked', false);
+            $('#bulkAssignCategoryError').hide().text('');
+            $('#bulkAssignCategoryModal').modal('show');
+        });
+
+        // Confirm Apply - assign or clear category
+        $(document).on('click', '#confirmBulkAssignCategoryBtn', function() {
+            const ids = getSelectedProductIds();
+            if (!ids.length) {
+                toastr.warning('Please select at least one product.');
+                return;
+            }
+
+            const clearCategory = $('#bulkClearCategory').is(':checked');
+            const selectedCategoryId = $('#bulkAssignCategorySelect').val();
+
+            if (!clearCategory && !selectedCategoryId) {
+                $('#bulkAssignCategoryError').text('Please select a category or choose Clear category.').show();
+                return;
+            }
+
+            showPageLoading();
+            $.post("{{ route('products.bulkAssignCategory') }}", {
+                _token: "{{ csrf_token() }}",
+                product_ids: ids,
+                category_id: clearCategory ? null : selectedCategoryId,
+                clear: clearCategory ? 1 : 0
+            }).done(function(response) {
+                hidePageLoading();
+                if (response.success) {
+                    $('#bulkAssignCategoryModal').modal('hide');
+                    toastr.success(response.message || 'Category updated for selected products.');
+                    reloadPageAfterSuccessToast();
+                } else {
+                    toastr.error(response.message || 'Bulk category assignment failed.');
+                }
+            }).fail(function(xhr) {
+                hidePageLoading();
+                const msg = xhr.responseJSON?.message || 'Bulk category assignment failed.';
+                toastr.error(msg);
+            });
+        });
+
         // Filter change handlers
         $('#filterCategory').on('change', function() {
             table.ajax.reload();
+            // If user hasn't manually set a page length, auto-adjust based on category filter
+            if (manualPageLength === null) {
+                const desired = getAutoPageLength();
+                if (table.page.len() !== desired) {
+                    table.page.len(desired).draw(false);
+                }
+            }
         });
 
         $('#filterCompetitor').on('change', function() {
@@ -2002,6 +2147,12 @@
                         competitor_id: competitorId,
                         competitor_url: url
                     });
+                } else {
+                    // Push an empty URL to explicitly clear it on the server
+                    competitorUrls.push({
+                        competitor_id: competitorId,
+                        competitor_url: ''
+                    });
                 }
             });
 
@@ -2121,10 +2272,26 @@
             let competitorWebsite = $('#modalCompetitorWebsite').val();
 
             if (!link.trim()) {
-                $('#modalCompetitorLinkError').text('Please enter a URL').show();
-                $('#modalCompetitorLink').addClass('is-invalid');
-                hidePageLoading();
-                $btn.prop('disabled', false).html(defaultBtnHtml);
+                // If link is empty, clear existing link+price
+                $.post("{{ route('products.removeLink') }}", {
+                    _token: "{{ csrf_token() }}",
+                    product_id: productId,
+                    competitor_id: competitorId
+                }).done(function(response) {
+                    hidePageLoading();
+                    if (response.success) {
+                        toastr.success(response.message || 'Link cleared');
+                        $('#competitorLinkModal').modal('hide');
+                        table.ajax.reload(null, false);
+                    } else {
+                        toastr.error(response.message || 'Failed to clear link');
+                    }
+                }).fail(function(xhr) {
+                    hidePageLoading();
+                    toastr.error(xhr.responseJSON?.message || 'Failed to clear link');
+                }).always(function() {
+                    $btn.prop('disabled', false).html(defaultBtnHtml);
+                });
                 return;
             }
 
