@@ -47,11 +47,12 @@
                                             <th class="text-center align-middle"><span class="userDatatable-title">Progress</span></th>
                                             <th class="text-center align-middle"><span class="userDatatable-title">Message</span></th>
                                             <th class="text-center align-middle"><span class="userDatatable-title">Updated</span></th>
+                                            <th class="text-center align-middle"><span class="userDatatable-title">Actions</span></th>
                                         </tr>
                                     </thead>
                                     <tbody id="bulkImportQueueTableBody">
                                         <tr>
-                                            <td colspan="9" class="text-muted text-center">No import jobs found.</td>
+                                            <td colspan="10" class="text-muted text-center">No import jobs found.</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -182,6 +183,21 @@ $(document).ready(function() {
                     return escapeHtml(data || row.created_at || '-');
                 }
             },
+            {
+                data: null,
+                className: 'text-center align-middle',
+                orderable: false,
+                render: function(data, type, row) {
+                    const errors = Array.isArray(row.errors) ? row.errors : [];
+                    const failed = Number(row.failed_count || 0);
+                    const hasErrors = errors.length > 0 || failed > 0;
+                    if (!hasErrors) {
+                        return '<div class="d-flex justify-content-center"><span class="text-muted">-</span></div>';
+                    }
+                    const payload = encodeURIComponent(JSON.stringify(errors));
+                    return '<div class="d-flex justify-content-center"><button type="button" class="btn btn-xs btn-outline-danger px-2 py-1 view-errors" data-job-id="' + Number(row.id || 0) + '" data-errors="' + payload + '" title="View error details">Errors</button></div>';
+                }
+            },
         ],
         columnDefs: [
             { targets: 0, width: '90px' },   // Job
@@ -193,6 +209,7 @@ $(document).ready(function() {
             { targets: 6, width: '210px' },  // Progress
             { targets: 7, width: '320px' },  // Message
             { targets: 8, width: '170px' },  // Updated
+            { targets: 9, width: '100px', className: 'text-center align-middle' },  // Actions
         ],
         drawCallback: function() {
             updateTableCountInfo(this.api());
@@ -218,6 +235,126 @@ $(document).ready(function() {
         $('#importStatusSearch').val('');
         table.ajax.reload();
     };
+
+    // Error details modal handling
+    $(document).on('click', '.view-errors', function() {
+        try {
+            // Ensure modal exists in DOM (layout may not render a separate modals section)
+            (function ensureErrorsModalExists() {
+                if (!document.getElementById('importErrorsModal')) {
+                    var wrapper = document.createElement('div');
+                    wrapper.innerHTML = '' +
+                        '<div class="modal fade" id="importErrorsModal" tabindex="-1" aria-hidden="true">' +
+                        '  <div class="modal-dialog modal-lg modal-dialog-scrollable">' +
+                        '    <div class="modal-content">' +
+                        '      <div class="modal-header">' +
+                        '        <h6 class="modal-title mb-0">Import Error Details</h6>' +
+                        '        <button type="button" class="btn btn-sm border-0 bg-transparent p-1" data-import-errors-close aria-label="Close" title="Close">' +
+                        '          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x">' +
+                        '            <line x1="18" y1="6" x2="6" y2="18"></line>' +
+                        '            <line x1="6" y1="6" x2="18" y2="18"></line>' +
+                        '          </svg>' +
+                        '        </button>' +
+                        '      </div>' +
+                        '      <div class="modal-body">' +
+                        '        <div id="importErrorsContent" class="small"></div>' +
+                        '      </div>' +
+                        '      <div class="modal-footer">' +
+                        '        <button type="button" class="btn btn-secondary btn-sm" data-import-errors-close>Close</button>' +
+                        '      </div>' +
+                        '    </div>' +
+                        '  </div>' +
+                        '</div>';
+                    document.body.appendChild(wrapper.firstChild);
+                }
+            })();
+
+            const encoded = $(this).data('errors') || '';
+            const decoded = decodeURIComponent(String(encoded));
+            let errors = [];
+            if (decoded) {
+                errors = JSON.parse(decoded);
+            }
+
+            let contentHtml = '';
+            const buildItem = function(item) {
+                if (item == null) {
+                    return '';
+                }
+                if (typeof item === 'string') {
+                    return '<li class="mb-1"><code>' + escapeHtml(item) + '</code></li>';
+                }
+                if (typeof item === 'object') {
+                    // Try common shapes: {row: n, message: '...'} or {index: n, error: '...'}
+                    const rowNum = item.row ?? item.index ?? '';
+                    const message = item.message ?? item.error ?? JSON.stringify(item);
+                    const prefix = rowNum !== '' ? ('Row ' + escapeHtml(String(rowNum)) + ': ') : '';
+                    return '<li class="mb-1"><code>' + prefix + escapeHtml(String(message)) + '</code></li>';
+                }
+                return '<li class="mb-1"><code>' + escapeHtml(String(item)) + '</code></li>';
+            };
+
+            if (Array.isArray(errors) && errors.length > 0) {
+                contentHtml = '<ol class="mb-0 ps-3">' + errors.map(buildItem).join('') + '</ol>';
+            } else {
+                contentHtml = '<div class="text-muted">No error details available.</div>';
+            }
+
+            $('#importErrorsContent').html(contentHtml);
+            const modalEl = document.getElementById('importErrorsModal');
+            // Initialize modal with backward-compatible pattern (Bootstrap <5.2 lacks getOrCreateInstance)
+            var modal = modalEl.__importErrorsModalInstance;
+            if (!modal) {
+                try {
+                    // Try existing instance getter first
+                    modal = (bootstrap.Modal.getInstance && bootstrap.Modal.getInstance(modalEl)) || null;
+                } catch (_) {
+                    modal = null;
+                }
+                if (!modal) {
+                    modal = new bootstrap.Modal(modalEl, { backdrop: true, keyboard: true, focus: true });
+                }
+                modalEl.__importErrorsModalInstance = modal;
+            }
+
+            // Ensure close buttons work even if data API fails
+            $(modalEl).off('click.importErrorsClose').on('click.importErrorsClose', '[data-import-errors-close]', function() {
+                var inst = modalEl.__importErrorsModalInstance;
+                if (!inst && bootstrap.Modal && bootstrap.Modal.getInstance) {
+                    inst = bootstrap.Modal.getInstance(modalEl);
+                }
+                if (!inst) {
+                    try {
+                        inst = new bootstrap.Modal(modalEl);
+                    } catch (_) {}
+                }
+                if (inst && typeof inst.hide === 'function') {
+                    inst.hide();
+                }
+            });
+
+            // Clean up modal element after hidden to avoid duplicates
+            $(modalEl).off('hidden.bs.modal.importErrors').on('hidden.bs.modal.importErrors', function() {
+                // Remove from DOM so a fresh one is created next time
+                this.parentNode && this.parentNode.removeChild(this);
+            });
+
+            modal.show();
+        } catch (e) {
+            $('#importErrorsContent').html('<div class="text-danger">Failed to load error details.</div>');
+            const modalEl = document.getElementById('importErrorsModal');
+            var modal;
+            try {
+                modal = (bootstrap.Modal.getInstance && bootstrap.Modal.getInstance(modalEl)) || null;
+            } catch (_) {
+                modal = null;
+            }
+            if (!modal) {
+                modal = new bootstrap.Modal(modalEl);
+            }
+            modal.show();
+        }
+    });
 });
 </script>
 <style>
@@ -249,3 +386,4 @@ $(document).ready(function() {
 }
 </style>
 @endsection
+
