@@ -1158,6 +1158,14 @@
             });
         }
 
+        function clearBulkSelectionState() {
+            selectedProductIds.clear();
+            $('.row-product-checkbox').prop('checked', false);
+            $('#selectAllProducts').prop('checked', false).prop('indeterminate', false);
+            syncSelectAllState();
+            updateBulkActionBar();
+        }
+
         function reloadPageAfterSuccessToast(delayMs = 1200) {
             setTimeout(function() {
                 // Prefer in-place refresh (no full page reload)
@@ -1621,10 +1629,7 @@
         });
 
         $(document).on('click', '#clearBulkSelectionBtn', function() {
-            selectedProductIds.clear();
-            $('.row-product-checkbox').prop('checked', false);
-            syncSelectAllState();
-            updateBulkActionBar();
+            clearBulkSelectionState();
         });
 
         $(document).on('click', '#bulkSyncPricingBtn', function(e) {
@@ -1633,32 +1638,92 @@
             if (e && typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
             if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
 
-            const ids = getSelectedProductIds();
-            if (!ids.length) {
-                toastr.warning('Please select at least one product.');
-                return false;
-            }
-
             const $btn = $(this);
             const originalHtml = $btn.html();
-            $btn.prop('disabled', true).html(`${originalHtml} <i class="fas fa-spinner fa-spin ms-2"></i>`);
 
-            $.post("{{ route('products.bulkSyncPricing') }}", {
-                _token: "{{ csrf_token() }}",
-                product_ids: ids
-            }).done(function(response) {
-                $btn.prop('disabled', false).html(originalHtml);
-                if (!response || !response.success || !response.import_job) {
-                    toastr.error(response?.message || 'Bulk pricing sync failed.');
+            // If nothing selected, treat as "Select All (Filtered)" for speed.
+            let ids = getSelectedProductIds();
+            const fetchFilteredIdsAndContinue = function() {
+                $btn.prop('disabled', true).html(`${originalHtml} <i class="fas fa-spinner fa-spin ms-2"></i>`);
+                $.ajax({
+                    url: "{{ route('products.filteredIds') }}",
+                    type: 'GET',
+                    data: {
+                        filter_name: $('#filterName').val(),
+                        filter_sku: $('#filterSku').val(),
+                        category: $('#filterCategory').val(),
+                        competitor_id: $('#filterCompetitor').val(),
+                        price_sort: $('#filterPriceSort').val(),
+                        product_price_sort: $('#filterProductPriceSort').val(),
+                        price_comparison: $('#filterPriceComparison').val(),
+                    }
+                }).done(function(res) {
+                    if (!res || !res.success) {
+                        toastr.error(res?.message || 'Failed to load filtered products.');
+                        return;
+                    }
+                    const total = Number(res.total || 0);
+                    const fetched = Array.isArray(res.product_ids) ? res.product_ids : [];
+                    if (!total || !fetched.length) {
+                        toastr.warning('No products found for current filters.');
+                        return;
+                    }
+
+                    Swal.fire({
+                        title: 'Get Pricing for all?',
+                        text: `No products selected. Get pricing for all ${total} filtered product(s)?`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, Get Pricing',
+                        cancelButtonText: 'Cancel',
+                        reverseButtons: true,
+                        focusCancel: true
+                    }).then(function(result) {
+                        if (!result.isConfirmed) return;
+                        ids = fetched;
+                        doBulkSync(ids, $btn, originalHtml);
+                    });
+                }).fail(function(xhr) {
+                    toastr.error(xhr.responseJSON?.message || 'Failed to load filtered products.');
+                }).always(function() {
+                    $btn.prop('disabled', false).html(originalHtml);
+                });
+            };
+
+            const doBulkSync = function(productIds, $button, originalButtonHtml) {
+                if (!Array.isArray(productIds) || !productIds.length) {
+                    toastr.warning('No products selected.');
                     return;
                 }
 
-                toastr.info(response.message || 'Pricing sync queued.');
-                startBulkPricingSyncStatusPolling(response.import_job.id);
-            }).fail(function(xhr) {
-                $btn.prop('disabled', false).html(originalHtml);
-                toastr.error(xhr.responseJSON?.message || 'Bulk pricing sync failed.');
-            });
+                $button.prop('disabled', true).html(`${originalButtonHtml} <i class="fas fa-spinner fa-spin ms-2"></i>`);
+                $.post("{{ route('products.bulkSyncPricing') }}", {
+                    _token: "{{ csrf_token() }}",
+                    product_ids: productIds
+                }).done(function(response) {
+                    $button.prop('disabled', false).html(originalButtonHtml);
+                    if (!response || !response.success || !response.import_job) {
+                        toastr.error(response?.message || 'Bulk pricing sync failed.');
+                        return;
+                    }
+
+                    // Clear selection immediately so the user can continue working without manually resetting.
+                    clearBulkSelectionState();
+
+                    toastr.info(response.message || 'Pricing sync queued.');
+                    startBulkPricingSyncStatusPolling(response.import_job.id);
+                }).fail(function(xhr) {
+                    $button.prop('disabled', false).html(originalButtonHtml);
+                    toastr.error(xhr.responseJSON?.message || 'Bulk pricing sync failed.');
+                });
+            };
+
+            if (!ids.length) {
+                fetchFilteredIdsAndContinue();
+                return false;
+            }
+
+            doBulkSync(ids, $btn, originalHtml);
 
             return false;
         });

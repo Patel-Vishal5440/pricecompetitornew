@@ -121,6 +121,7 @@ Route::group(['middleware' => 'auth'], function () {
 
     Route::group(['prefix' => 'products'], function () {
         Route::get('/list', [ProductController::class, 'index'])->name('products.list');
+        Route::get('/filtered-ids', [ProductController::class, 'filteredIds'])->name('products.filteredIds');
         Route::get('/import-status', [ProductController::class, 'importStatusPage'])->name('products.import-status');
         Route::get('/import-status/jobs', [ProductController::class, 'importStatusJobs'])->name('products.importStatusJobs');
         Route::post('/store', [ProductController::class, 'store'])->name('products.store');

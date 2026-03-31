@@ -64,6 +64,31 @@ class ProductController extends Controller
         
     }
 
+    /**
+     * Return product IDs for the current products list filters.
+     * Used by bulk actions to support "Get Pricing" without manually selecting rows.
+     */
+    public function filteredIds(ProductRepository $productRepository, Request $request)
+    {
+        // Keep this endpoint lightweight and safe: same filter inputs as the DataTable.
+        $ids = $productRepository->getFilteredProductIds($request);
+
+        // Safety guard to avoid accidental huge payloads.
+        $max = 10000;
+        if (count($ids) > $max) {
+            return response()->json([
+                'success' => false,
+                'message' => "Too many products selected (" . count($ids) . "). Please narrow your filters.",
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'total' => count($ids),
+            'product_ids' => $ids,
+        ]);
+    }
+
     public function importStatusPage()
     {
         return view('product.import-status', [

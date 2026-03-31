@@ -32,6 +32,109 @@ class ProductRepository
         return 'No Category';
     }
 
+    /**
+     * Return all product IDs matching the same filters used by the products DataTable.
+     * Used for bulk actions like "Get Pricing" when user wants "select all (filtered)".
+     */
+    public function getFilteredProductIds(Request $request): array
+    {
+        $searchData = $request->get('searchData', null); // backward compatibility
+        $filterName = $request->get('filter_name', null);
+        $filterSku = $request->get('filter_sku', null);
+        $category = $request->get('category', null);
+        $competitorId = $request->get('competitor_id', null);
+        $priceSort = $request->get('price_sort', null); // 'low_to_high' or 'high_to_low'
+        $productPriceSort = $request->get('product_price_sort', null); // 'low_to_high' or 'high_to_low'
+        $priceComparison = $request->get('price_comparison', null); // 'higher' or 'lower'
+
+        $product = Product::query()
+            ->when($searchData, function (Builder $query, $searchData) {
+                return $query->where(function ($query) use ($searchData) {
+                    $query->where('name', 'like', "%{$searchData}%")
+                          ->orWhere('default_code', 'like', "%{$searchData}%");
+                });
+            })
+            ->when($filterName, function (Builder $query, $filterName) {
+                return $query->where('name', 'like', "%{$filterName}%");
+            })
+            ->when($filterSku, function (Builder $query, $filterSku) {
+                return $query->where('default_code', 'like', "%{$filterSku}%");
+            })
+            ->when($category, function (Builder $query, $category) {
+                if (is_numeric($category)) {
+                    return $query->where('category_id', $category);
+                } else {
+                    return $query->where('category', $category);
+                }
+            })
+            ->when($competitorId, function (Builder $query, $competitorId) {
+                return $query->whereHas('competitorPrices', function ($q) use ($competitorId) {
+                    $q->where('competitor_id', $competitorId);
+                });
+            });
+
+        $needsJoin = ($priceComparison && $competitorId) || ($priceSort && $competitorId);
+
+        if ($priceComparison) {
+            if ($competitorId) {
+                $product->leftJoin('product_competitor_prices', function($join) use ($competitorId) {
+                    $join->on('products.id', '=', 'product_competitor_prices.product_id')
+                         ->where('product_competitor_prices.competitor_id', '=', $competitorId)
+                         ->whereNotNull('product_competitor_prices.price');
+                })
+                ->whereNotNull('products.list_price')
+                ->whereNotNull('product_competitor_prices.price');
+
+                if ($priceComparison === 'higher') {
+                    $product->whereColumn('product_competitor_prices.price', '>', 'products.list_price');
+                } elseif ($priceComparison === 'lower') {
+                    $product->whereColumn('product_competitor_prices.price', '<', 'products.list_price');
+                }
+            } else {
+                $product->whereNotNull('products.list_price')
+                        ->whereHas('competitorPrices', function($q) use ($priceComparison) {
+                            $q->whereNotNull('price');
+                            if ($priceComparison === 'higher') {
+                                $q->whereRaw('product_competitor_prices.price > (SELECT list_price FROM products WHERE products.id = product_competitor_prices.product_id)');
+                            } elseif ($priceComparison === 'lower') {
+                                $q->whereRaw('product_competitor_prices.price < (SELECT list_price FROM products WHERE products.id = product_competitor_prices.product_id)');
+                            }
+                        });
+            }
+        }
+
+        if ($priceSort && $competitorId && !$priceComparison) {
+            $product->leftJoin('product_competitor_prices', function($join) use ($competitorId) {
+                $join->on('products.id', '=', 'product_competitor_prices.product_id')
+                     ->where('product_competitor_prices.competitor_id', '=', $competitorId);
+            });
+        }
+
+        // Keep ordering consistent (not required for IDs, but avoids surprises)
+        if ($priceSort && $competitorId) {
+            if ($priceSort === 'high_to_low') {
+                $product->orderByRaw('product_competitor_prices.price IS NULL ASC, CAST(product_competitor_prices.price AS DECIMAL(15,4)) DESC');
+            } else {
+                $product->orderByRaw('product_competitor_prices.price IS NULL ASC, CAST(product_competitor_prices.price AS DECIMAL(15,4)) ASC');
+            }
+        } elseif ($productPriceSort) {
+            if ($productPriceSort === 'high_to_low') {
+                $product->orderByRaw('products.list_price IS NULL ASC, CAST(products.list_price AS DECIMAL(15,4)) DESC');
+            } else {
+                $product->orderByRaw('products.list_price IS NULL ASC, CAST(products.list_price AS DECIMAL(15,4)) ASC');
+            }
+        } else {
+            $product->latest('id');
+        }
+
+        // Select IDs safely even when joined.
+        if ($needsJoin) {
+            return $product->distinct()->pluck('products.id')->map(fn ($id) => (int) $id)->toArray();
+        }
+
+        return $product->pluck('id')->map(fn ($id) => (int) $id)->toArray();
+    }
+
     public function dataSource(Request $request){
         $searchData = $request->get('searchData', null); // backward compatibility
         $filterName = $request->get('filter_name', null);
