@@ -222,6 +222,61 @@
         margin-top: 0;
     }
 
+    /* DataTables bottom bar: keep pagination + "Max rows" aligned and responsive */
+    .bottom.d-flex.justify-content-between.align-items-center.flex-wrap.gap-2 {
+        row-gap: 0.5rem;
+    }
+
+    .bottom .dt-right-controls {
+        margin-left: auto; /* push to the right side */
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .bottom #manualPageLengthWrapper {
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+
+    .bottom #manualPageLengthWrapper .manual-page-length-labels {
+        line-height: 1.15;
+        justify-content: center;
+        min-width: 110px;
+    }
+
+    .bottom #manualPageLengthWrapper .manual-page-length-input-group {
+        width: 190px;
+        max-width: 100%;
+    }
+
+    /* Match pagination/button sizing */
+    .bottom #manualPageLengthWrapper .manual-page-length-input-group .form-control,
+    .bottom #manualPageLengthWrapper .manual-page-length-input-group .btn {
+        height: 32px;
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+    }
+
+    @media (max-width: 576px) {
+        .bottom #manualPageLengthWrapper {
+            flex-wrap: wrap;
+            width: 100%;
+            justify-content: flex-end;
+        }
+
+        .bottom #manualPageLengthWrapper .manual-page-length-labels {
+            min-width: 0;
+            width: auto;
+        }
+
+        .bottom #manualPageLengthWrapper .manual-page-length-input-group {
+            width: 100%;
+        }
+    }
+
     .product-name-cell {
         display: inline-block;
         width: 100%;
@@ -490,7 +545,7 @@
                                 <div class="d-flex align-items-center flex-wrap gap-3 p-2 toolbar-inner">
                                     <div class="d-flex align-items-center flex-wrap gap-3">
                                         <div class="d-flex align-items-center gap-2 price-comparison-group">
-                                            <label class="form-label small text-muted mb-0">Price Comparison</label>
+                                            <!-- <label class="form-label small text-muted mb-0">Price Comparison</label> -->
                                             <select id="filterPriceComparison" class="form-control form-control-solid" style="min-width: 180px;" title="Compare your price with competitors (works with All Competitors or a specific competitor)">
                                                 <option value="">All Prices</option>
                                                 <option value="higher">Competitor Higher</option>
@@ -1140,12 +1195,12 @@
             if ($('#manualPageLengthWrapper').length) return;
 
             const controlHtml = `
-                <div id="manualPageLengthWrapper" class="d-flex align-items-center flex-wrap gap-2">
-                    <div class="d-flex flex-column">
-                        <label for="manualPageLengthInput" class="small text-muted mb-0">Max rows</label>
-                        <small class="text-muted small">Use -1 for all rows</small>
+                <div id="manualPageLengthWrapper" class="d-flex align-items-center gap-2">
+                    <div class="d-flex flex-column manual-page-length-labels">
+                        <label for="manualPageLengthInput" class="small text-muted mb-0 text-nowrap">Max rows</label>
+                        <small class="text-muted small text-nowrap">Use -1 for all rows</small>
                     </div>
-                    <div class="input-group input-group-sm" style="width: 190px;">
+                    <div class="input-group input-group-sm manual-page-length-input-group">
                         <input
                             type="number"
                             min="-1"
@@ -1159,8 +1214,20 @@
                     </div>
                 </div>
             `;
-            // Insert before pagination controls
-            $bottom.find('.dataTables_paginate').before(controlHtml);
+            // Keep pagination + manual length control together (right aligned)
+            const $paginate = $bottom.find('.dataTables_paginate');
+            if (!$paginate.length) return;
+
+            // Ensure right-controls wrapper exists
+            let $right = $bottom.find('.dt-right-controls');
+            if (!$right.length) {
+                $right = $('<div class="dt-right-controls"></div>');
+                $paginate.before($right);
+                $right.append($paginate); // move paginate into wrapper
+            }
+
+            // Add manual control before pagination inside the right wrapper
+            $right.prepend(controlHtml);
 
             // Wire events
             $(document).on('click', '#applyManualPageLengthBtn', function() {
