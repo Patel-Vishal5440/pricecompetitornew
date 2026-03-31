@@ -227,8 +227,159 @@
         width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
+        /* Bigger font + clean 2-line wrap */
+        font-size: 15px;
+        font-weight: 400;
+        line-height: 1.25;
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+
+    /* Only product name should wrap */
+    #datatable td .product-name-cell {
+        white-space: normal !important;
+    }
+
+    /* Ensure Product Name column isn't clamped by global datatable styles */
+    #datatable td.product-name-col,
+    #datatable th.product-name-col {
+        max-width: none !important;
+        white-space: normal !important;
+    }
+
+    /* Make the table fit the screen (avoid horizontal scroll) */
+    #datatable {
+        width: 100% !important;
+        table-layout: fixed;
+    }
+
+    #datatable th,
+    #datatable td {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Remove the visible “gap” between checkbox column and Product Name */
+    #datatable th.select-col,
+    #datatable td.select-col {
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+        vertical-align: middle !important;
+    }
+
+    /* Checkbox alignment (header + rows) */
+    #datatable th.select-col,
+    #datatable td.select-col {
+        text-align: center !important;
+    }
+
+    #datatable th.select-col .form-check-input,
+    #datatable td.select-col .form-check-input {
+        margin: 0 auto !important;
+        float: none !important;
+        display: block;
+        position: relative;
+        top: 0;
+    }
+
+    /* Hide sort arrows / click affordance completely */
+    #datatable thead th.sorting:before,
+    #datatable thead th.sorting:after,
+    #datatable thead th.sorting_asc:before,
+    #datatable thead th.sorting_asc:after,
+    #datatable thead th.sorting_desc:before,
+    #datatable thead th.sorting_desc:after {
+        display: none !important;
+        content: '' !important;
+    }
+
+    #datatable th.product-name-col,
+    #datatable td.product-name-col {
+        text-align: left !important;
+        padding-left: 8px !important;
+    }
+
+    /* Remove “reserved” header space for sort icons so it doesn't look like an empty column */
+    #datatable.dataTable thead > tr > th.sorting,
+    #datatable.dataTable thead > tr > th.sorting_asc,
+    #datatable.dataTable thead > tr > th.sorting_desc,
+    #datatable.dataTable thead > tr > th.sorting_asc_disabled,
+    #datatable.dataTable thead > tr > th.sorting_desc_disabled {
+        padding-right: 8px !important;
+        cursor: default !important;
+    }
+
+    /* Tighten numeric + competitor cells (removes the big empty “bands” around small values) */
+    #datatable td .fw-bold[style*="min-width"] {
+        min-width: 0 !important;
+    }
+
+    #datatable td .d-flex.justify-content-center.align-items-center {
+        justify-content: center !important;
+        gap: 0.2rem !important;
+    }
+
+    /* Prevent text+icons from overlapping when columns get narrow */
+    #datatable td .d-flex.justify-content-center.align-items-center > span.fw-bold {
+        min-width: 0 !important;
+        flex: 1 1 auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
-        cursor: help;
+    }
+
+    #datatable td .d-flex.justify-content-center.align-items-center > a {
+        flex: 0 0 auto;
+    }
+
+    #datatable td.sku-col,
+    #datatable th.sku-col {
+        max-width: none !important;
+        white-space: normal !important;
+    }
+
+    #datatable th.sku-col {
+        text-align: left !important;
+    }
+
+    #datatable td.category-col,
+    #datatable th.category-col {
+        max-width: none !important;
+        white-space: normal !important;
+    }
+
+    /* SKU alignment (no flex-center) */
+    #datatable td.sku-col {
+        padding-top: 6px !important;
+        padding-bottom: 6px !important;
+        text-align: left !important;
+    }
+
+    #datatable td.sku-col .sku-cell {
+        display: block;
+        width: 100%;
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.2;
+        font-weight: 400;
+        font-size: 13px;
+    }
+
+    /* Tighten price/link cells (reduce gaps + remove extra left margin on icons) */
+    #datatable td .edit-price-btn,
+    #datatable td .add-link-btn {
+        margin-left: 0 !important;
+    }
+
+    #datatable td .d-flex.justify-content-center.align-items-center {
+        gap: 0.25rem !important;
     }
 
     @media (max-width: 992px) {
@@ -989,10 +1140,23 @@
             if ($('#manualPageLengthWrapper').length) return;
 
             const controlHtml = `
-                <div id="manualPageLengthWrapper" class="d-flex align-items-center gap-2">
-                    <label for="manualPageLengthInput" class="small text-muted mb-0">Max rows</label>
-                    <input type="number" min="-1" step="1" id="manualPageLengthInput" class="form-control form-control-sm" style="width: 100px;" placeholder="${getAutoPageLength()}">
-                    <button type="button" id="applyManualPageLengthBtn" class="btn btn-sm btn-outline-primary">Apply</button>
+                <div id="manualPageLengthWrapper" class="d-flex align-items-center flex-wrap gap-2">
+                    <div class="d-flex flex-column">
+                        <label for="manualPageLengthInput" class="small text-muted mb-0">Max rows</label>
+                        <small class="text-muted small">Use -1 for all rows</small>
+                    </div>
+                    <div class="input-group input-group-sm" style="width: 190px;">
+                        <input
+                            type="number"
+                            min="-1"
+                            step="1"
+                            id="manualPageLengthInput"
+                            class="form-control"
+                            placeholder="${getAutoPageLength()} (auto)"
+                            aria-label="Max rows"
+                        >
+                        <button type="button" id="applyManualPageLengthBtn" class="btn btn-outline-primary">Apply</button>
+                    </div>
                 </div>
             `;
             // Insert before pagination controls
@@ -1041,7 +1205,7 @@
                 className: 'text-center mobilenzo-column select-col',
                 searchable: false,
                 orderable: false,
-                width: '40px',
+                width: '32px',
                 render: function(data) {
                     return `<div class="d-flex justify-content-center align-items-center w-100">
                         <input type="checkbox" class="form-check-input row-product-checkbox" data-product-id="${data}">
@@ -1051,8 +1215,8 @@
             {
                 data: 'name',
                 name: 'name',
-                className: 'text-start mobilenzo-column',
-                width: '250px',
+                className: 'text-start mobilenzo-column product-name-col',
+                width: '32%',
                 render: function(data) {
                     const fullName = String(data || '');
                     const safeName = escapeHtml(fullName);
@@ -1062,14 +1226,18 @@
             {
                 data: 'default_code',
                 name: 'default_code',
-                className: 'text-center mobilenzo-column',
-                width: '120px'
+                className: 'text-center mobilenzo-column sku-col',
+                width: '12%',
+                render: function(data) {
+                    const sku = escapeHtml(String(data || ''));
+                    return `<span class="sku-cell" title="${sku}">${sku}</span>`;
+                }
             },
             {
                 data: 'category_display',
                 name: 'category_display',
-                className: 'text-center mobilenzo-column',
-                width: '150px',
+                className: 'text-center mobilenzo-column category-col',
+                width: '16%',
                 render: function(data) {
                     return data || '<span style="display: inline-block; padding: 6px 12px; border: 1px solid #6c757d; border-radius: 4px; background-color: transparent; color: #6c757d; font-size: 12px; font-weight: 500; text-align: center; min-width: 80px;">No Category</span>';
                 }
@@ -1077,7 +1245,8 @@
             {
                 data: 'list_price',
                 name: 'list_price',
-                className: 'text-center mobilenzo-column',
+                className: 'text-center mobilenzo-column price-col',
+                width: '7%',
                 render: function(data, type, row) {
                     const ourPrice = parseFloat(data) || 0;
                     const formattedPrice = ourPrice > 0 ? ourPrice.toFixed(2) : '0.00';
@@ -1104,7 +1273,7 @@
 
                     return `
                     <div class="d-flex justify-content-center align-items-center" style="gap: 0.5rem;">
-                        <span class="fw-bold ${priceColorClass}" style="font-size: 1rem; min-width: 60px;">$${formattedPrice}</span>
+                        <span class="fw-bold ${priceColorClass}" style="font-size: 0.95rem;">$${formattedPrice}</span>
                         <a href="javascript:void(0)" class="text-primary edit-price-btn"
                            data-product-id="${row.odoo_id}"
                            data-current-price="${data}"
@@ -1118,11 +1287,12 @@
             {
                 data: 'cost',
                 name: 'cost',
-                className: 'text-center mobilenzo-column',
+                className: 'text-center mobilenzo-column cost-col',
+                width: '7%',
                 render: function(data) {
                     const cost = parseFloat(data) || 0;
                     const formattedCost = cost > 0 ? cost.toFixed(2) : '0.00';
-                    return `<span class="fw-bold" style="font-size: 1rem; min-width: 60px;">$${formattedCost}</span>`;
+                    return `<span class="fw-bold" style="font-size: 0.95rem;">$${formattedCost}</span>`;
                 }
             },
             @foreach ($competitors as $competitor)
@@ -1130,6 +1300,7 @@
                 data: 'competitor_link_{{ $competitor->id }}',
                 name: 'competitor_link_{{ $competitor->id }}',
                 className: 'text-center competitor-column',
+                width: '10%',
                 orderable: false,
                 render: function(data, type, row) {
                     const competitorLink = data || '';
@@ -1137,7 +1308,7 @@
                     const formattedPrice = competitorPrice > 0 ? competitorPrice.toFixed(2) : '0.00';
                     return `
                     <div class="d-flex justify-content-center align-items-center" style="gap: 0.5rem;">
-                        <span class="fw-bold" style="font-size: 1rem; min-width: 60px;">$${formattedPrice}</span>
+                        <span class="fw-bold" style="font-size: 0.95rem;">$${formattedPrice}</span>
                         <a href="javascript:void(0)" class="add-link-btn ${competitorLink ? 'text-primary' : 'text-muted'}"
                            data-row-id="{{ $competitor->id }}"
                            data-product-id="${row.id}"
@@ -1159,7 +1330,7 @@
                 className: 'text-center mobilenzo-column',
                 searchable: false,
                 orderable: false,
-                width: '60px'
+                width: '6%'
             },
         ];
 
@@ -1256,7 +1427,8 @@
                 processing: true,
                 serverSide: true,
                 searching: false,
-                ordering: true,
+                ordering: false,
+                autoWidth: false,
                 dom: 'rt<"bottom d-flex justify-content-between align-items-center flex-wrap gap-2"l<"product-table-count-info text-center flex-grow-1 small fw-semibold text-primary">p><"clear">',
                 pageLength: getAutoPageLength(),
                 lengthMenu: [[10, 25, 50, 100, 200, 500, -1], [10, 25, 50, 100, 200, 500, 'All']],
