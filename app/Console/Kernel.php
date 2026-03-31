@@ -18,8 +18,31 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
+        // ------------------------------------------------------------------
+        // Queue worker (auto-run)
+        // ------------------------------------------------------------------
+        // Many features in this app dispatch long-running work to the database queue
+        // (imports, pricing sync). If no queue worker is running, jobs will stay
+        // "Queued" forever. This scheduled worker processes pending jobs in a
+        // cron-friendly way: it exits once the queue is empty or after max-time.
+        //
+        // IMPORTANT: This requires the server cron to run `php artisan schedule:run`
+        // every minute.
+        $schedule->command('queue:work database --stop-when-empty --max-time=55 --sleep=1 --tries=3')
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->runInBackground();
+
         // Load active cron jobs from database
-        $cronJobs = CronJob::active()->get();
+        // Guard this so a missing table/migration doesn't break the scheduler boot.
+        try {
+            $cronJobs = CronJob::active()->get();
+        } catch (\Throwable $e) {
+            $cronJobs = collect();
+            Log::warning('CronJob schedule load failed; skipping DB-driven cron jobs', [
+                'error' => $e->getMessage(),
+            ]);
+        }
         
         foreach ($cronJobs as $cronJob) {
             // Get schedule times (prefer schedule_times array, fallback to single schedule_time)

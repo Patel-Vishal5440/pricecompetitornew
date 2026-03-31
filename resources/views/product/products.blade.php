@@ -1710,8 +1710,8 @@
                     // Clear selection immediately so the user can continue working without manually resetting.
                     clearBulkSelectionState();
 
-                    toastr.info(response.message || 'Pricing sync queued.');
-                    startBulkPricingSyncStatusPolling(response.import_job.id);
+                    // Background mode: queue the job and let the user continue working with no progress UI.
+                    toastr.success(response.message || 'Pricing sync started in background.');
                 }).fail(function(xhr) {
                     $button.prop('disabled', false).html(originalButtonHtml);
                     toastr.error(xhr.responseJSON?.message || 'Bulk pricing sync failed.');
@@ -1727,44 +1727,6 @@
 
             return false;
         });
-
-        let bulkPricingSyncPollingTimer = null;
-        let activeBulkPricingSyncJobId = null;
-
-        function startBulkPricingSyncStatusPolling(importJobId) {
-            activeBulkPricingSyncJobId = importJobId;
-            if (bulkPricingSyncPollingTimer) {
-                clearInterval(bulkPricingSyncPollingTimer);
-            }
-
-            const fetchStatus = function() {
-                $.ajax({
-                    url: "{{ route('products.bulkSyncPricingStatus', ['id' => 0]) }}".replace(/0$/, String(activeBulkPricingSyncJobId)),
-                    type: 'GET',
-                    success: function(response) {
-                        if (!response.success || !response.import_job) {
-                            return;
-                        }
-                        const job = response.import_job;
-
-                        if (job.status === 'completed' || job.status === 'failed') {
-                            clearInterval(bulkPricingSyncPollingTimer);
-                            bulkPricingSyncPollingTimer = null;
-
-                            if (job.status === 'completed') {
-                                toastr.success(job.message || 'Pricing sync completed');
-                                table.ajax.reload(null, false);
-                            } else {
-                                toastr.error(job.message || 'Pricing sync failed');
-                            }
-                        }
-                    }
-                });
-            };
-
-            fetchStatus();
-            bulkPricingSyncPollingTimer = setInterval(fetchStatus, 3000);
-        }
 
         $(document).on('click', '#bulkDeleteBtn', function() {
             const ids = getSelectedProductIds();
