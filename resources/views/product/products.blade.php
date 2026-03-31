@@ -206,7 +206,6 @@
     .price-comparison-group {
         margin-right: 0.5rem;
     }
-
     .bulk-action-bar {
         display: none;
         align-items: center;
