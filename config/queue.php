@@ -13,7 +13,9 @@ return [
     |
     */
 
-    'default' => env('QUEUE_CONNECTION', 'sync'),
+    // Default to database so long-running jobs (e.g. pricing sync scraping) don't block web requests.
+    // You can still override via QUEUE_CONNECTION in the environment.
+    'default' => env('QUEUE_CONNECTION', 'database'),
 
     /*
     |--------------------------------------------------------------------------

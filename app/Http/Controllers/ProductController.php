@@ -17,6 +17,7 @@ use App\Jobs\ScrapeCompetitorPrice;
 use App\Jobs\StoreOdooProducts;
 use App\Jobs\ProcessBulkProductImport;
 use App\Jobs\ProcessBulkPriceImport;
+use App\Jobs\ProcessBulkPricingSync;
 use App\Models\ActivityFeed;
 use App\Models\BulkImportJob;
 use App\Models\User;
@@ -353,68 +354,42 @@ class ProductController extends Controller
             'product_ids.*' => 'integer|exists:products,id',
         ]);
 
-        $products = Product::with('competitorPrices')->whereIn('id', $validated['product_ids'])->get();
+        $productIds = array_values(array_unique(array_map('intval', $validated['product_ids'])));
 
-        $sourceUpdated = 0;
-        $competitorUpdated = 0;
-        $failed = 0;
+        $importJob = BulkImportJob::create([
+            'user_id' => Auth::id(),
+            'type' => 'pricing-sync',
+            'status' => 'queued',
+            'total_rows' => count($productIds),
+            'processed_rows' => 0,
+            'success_count' => 0,
+            'failed_count' => 0,
+            'errors' => [],
+            'meta' => [
+                'product_ids' => $productIds,
+            ],
+            'message' => 'Pricing sync queued.',
+        ]);
 
-        foreach ($products as $product) {
-            try {
-                if ($product->odoo_id && !$this->isManualProduct($product->odoo_id)) {
-                    $sourceResponse = $this->odooService->fetchSpecificProduct($product->odoo_id);
-                    if (isset($sourceResponse['result'][0])) {
-                        $sourceProduct = $sourceResponse['result'][0];
-                        $product->update([
-                            'name' => $sourceProduct['name'] ?? $product->name,
-                            'default_code' => $sourceProduct['default_code'] ?? $product->default_code,
-                            'list_price' => $sourceProduct['list_price'] ?? $product->list_price,
-                            'cost' => $sourceProduct['standard_price'] ?? $product->cost,
-                            'barcode' => $sourceProduct['barcode'] ?? $product->barcode,
-                        ]);
-                        $sourceUpdated++;
-                    }
-                }
-
-                foreach ($product->competitorPrices as $competitorPrice) {
-                    if (empty($competitorPrice->competitor_url)) {
-                        continue;
-                    }
-
-                    try {
-                        $price = $this->scrapeCompetitorPrice($competitorPrice->competitor_url);
-                        if ($price !== null) {
-                            $competitorPrice->update(['price' => $price]);
-                            $competitorUpdated++;
-                        }
-                    } catch (\Exception $e) {
-                        Log::warning('Bulk competitor pricing sync failed', [
-                            'product_id' => $product->id,
-                            'competitor_id' => $competitorPrice->competitor_id,
-                            'url' => $competitorPrice->competitor_url,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
-                }
-            } catch (\Exception $e) {
-                $failed++;
-                Log::warning('Bulk pricing sync failed for product', [
-                    'product_id' => $product->id,
-                    'odoo_id' => $product->odoo_id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
+        // Force this long-running job onto the database queue so it never blocks the HTTP request,
+        // even if the app's default queue connection is set to "sync" in the environment.
+        ProcessBulkPricingSync::dispatch($importJob->id, $productIds)
+            ->onConnection('database');
 
         return response()->json([
             'success' => true,
-            'message' => 'Bulk pricing sync completed.',
-            'summary' => [
-                'products_processed' => $products->count(),
-                'source_updated' => $sourceUpdated,
-                'competitor_prices_updated' => $competitorUpdated,
-                'failed_products' => $failed,
-            ],
+            'message' => 'Pricing sync queued successfully. Processing started in background.',
+            'import_job' => $this->formatImportJobResponse($importJob),
+        ]);
+    }
+
+    public function bulkSyncPricingStatus(int $id)
+    {
+        $importJob = BulkImportJob::where('type', 'pricing-sync')->findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'import_job' => $this->formatImportJobResponse($importJob),
         ]);
     }
 
@@ -991,10 +966,17 @@ class ProductController extends Controller
             $percent = 100;
         }
 
+        $typeLabel = match ($job->type) {
+            'price' => 'Product Price Update',
+            'products' => 'Product Import',
+            'pricing-sync' => 'Pricing Sync',
+            default => ucfirst((string) $job->type),
+        };
+
         return [
             'id' => $job->id,
             'type' => $job->type,
-            'type_label' => $job->type === 'price' ? 'Product Price Update' : 'Product Import',
+            'type_label' => $typeLabel,
             'status' => $job->status,
             'total_rows' => $totalRows,
             'processed_rows' => $processedRows,
@@ -1003,6 +985,7 @@ class ProductController extends Controller
             'progress_percent' => min(100, max(0, $percent)),
             'message' => $job->message,
             'errors' => is_array($job->errors) ? $job->errors : [],
+            'meta' => is_array($job->meta) ? $job->meta : [],
             'started_at' => optional($job->started_at)->toDateTimeString(),
             'completed_at' => optional($job->completed_at)->toDateTimeString(),
             'created_at' => optional($job->created_at)->toDateTimeString(),

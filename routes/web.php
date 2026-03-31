@@ -134,6 +134,7 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/get-competitor-urls', [ProductController::class, 'getCompetitorUrls'])->name('products.getCompetitorUrls');
         Route::get('/sync-specific', [ProductController::class, 'syncSpecificProduct'])->name('products.sync-specific');
         Route::post('/bulk-sync-pricing', [ProductController::class, 'bulkSyncPricing'])->name('products.bulkSyncPricing');
+        Route::get('/bulk-sync-pricing/status/{id}', [ProductController::class, 'bulkSyncPricingStatus'])->name('products.bulkSyncPricingStatus');
         Route::post('/bulk-assign-category', [ProductController::class, 'bulkAssignCategory'])->name('products.bulkAssignCategory');
         Route::post('/bulk-delete', [ProductController::class, 'bulkDelete'])->name('products.bulkDelete');
         // Route::get('/sync-products', [ProductController::class, 'syncProducts']);

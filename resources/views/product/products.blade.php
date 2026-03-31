@@ -908,6 +908,8 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="{{ asset('vendor_assets/js/toastr/toastr.min.js') }}"></script>
 <script>
+// @ts-nocheck
+// Blade templates contain directives like @@foreach which confuse TS/JS language services.
     $(document).ready(function() {
         function showPageLoading() {
             document.getElementById("loadingIndicator").style.display = "flex";
@@ -953,7 +955,10 @@
 
         function reloadPageAfterSuccessToast(delayMs = 1200) {
             setTimeout(function() {
-                window.location.reload();
+                // Prefer in-place refresh (no full page reload)
+                if (typeof table !== 'undefined' && table) {
+                    table.ajax.reload(null, false);
+                }
             }, delayMs);
         }
 
@@ -1010,185 +1015,325 @@
             });
         }
 
-        let table = $('#datatable').DataTable({
-            processing: true,
-            serverSide: true,
-            searching: false,
-            ordering: false,
-            dom: 'rt<"bottom d-flex justify-content-between align-items-center flex-wrap gap-2"l<"product-table-count-info text-center flex-grow-1 small fw-semibold text-primary">p><"clear">',
-            pageLength: getAutoPageLength(),
-            lengthMenu: [[10, 25, 50, 100, 200, 500, -1], [10, 25, 50, 100, 200, 500, 'All']],
-            language: {
-                emptyTable: `<div class="py-4 text-center text-muted">
-                <i class="fas fa-box-open fa-2x mb-2"></i><br>
-                <span style="font-size: 1.1em;">No products found.</span>
-            </div>`,
-            },
-            ajax: {
-                url: "{{ route('products.list') }}",
-                data: function(data) {
-                    hidePageLoading();
-                    data.filter_name = $('#filterName').val();
-                    data.filter_sku = $('#filterSku').val();
-                    data.category = $('#filterCategory').val();
-                    data.competitor_id = $('#filterCompetitor').val();
-                    data.price_sort = $('#filterPriceSort').val();
-                    data.product_price_sort = $('#filterProductPriceSort').val();
-                    data.price_comparison = $('#filterPriceComparison').val();
-                },
-                complete: function() {
-                    $('[data-bs-toggle="tooltip"]').tooltip('dispose');
-                    $('[data-bs-toggle="tooltip"]').tooltip();
+        // Click-to-sort + column drag/drop (persisted per user)
+        const columnOrderStorageKey = (function() {
+            const userId = "{{ auth()->id() ?? '' }}";
+            return `products_table_column_order:${userId || 'guest'}`;
+        })();
+
+        function safeParseJson(val) {
+            try { return JSON.parse(val); } catch (e) { return null; }
+        }
+
+        function getSavedColumnOrder() {
+            const raw = localStorage.getItem(columnOrderStorageKey);
+            const parsed = safeParseJson(raw);
+            return Array.isArray(parsed) ? parsed : null;
+        }
+
+        function saveColumnOrder(orderArr) {
+            try { localStorage.setItem(columnOrderStorageKey, JSON.stringify(orderArr)); } catch (e) {}
+        }
+
+        const baseColumns = [{
+                data: 'id',
+                name: 'id',
+                className: 'text-center mobilenzo-column select-col',
+                searchable: false,
+                orderable: false,
+                width: '40px',
+                render: function(data) {
+                    return `<div class="d-flex justify-content-center align-items-center w-100">
+                        <input type="checkbox" class="form-check-input row-product-checkbox" data-product-id="${data}">
+                    </div>`;
                 }
             },
-            drawCallback: function() {
-                $('.row-product-checkbox').each(function() {
-                    const id = $(this).data('product-id');
-                    $(this).prop('checked', selectedProductIds.has(String(id)));
-                });
-                syncSelectAllState();
-                updateBulkActionBar();
-                updateProductCountInfo(this.api());
-                ensureManualLengthControl();
+            {
+                data: 'name',
+                name: 'name',
+                className: 'text-start mobilenzo-column',
+                width: '250px',
+                render: function(data) {
+                    const fullName = String(data || '');
+                    const safeName = escapeHtml(fullName);
+                    return `<span class="product-name-cell" data-bs-toggle="tooltip" data-bs-placement="top" title="${safeName}">${safeName}</span>`;
+                }
             },
-            columns: [{
-                    data: 'id',
-                    name: 'id',
-                    className: 'text-center mobilenzo-column',
-                    searchable: false,
-                    width: '40px',
-                    render: function(data) {
-                        return `<input type="checkbox" class="form-check-input row-product-checkbox" data-product-id="${data}">`;
-                    }
-                },
-                // { data: 'odoo_id', name: 'id', className: 'text-center', width: '60px' },
-                {
-                    data: 'name',
-                    name: 'name',
-                    className: 'text-start mobilenzo-column',
-                    width: '250px',
-                    render: function(data) {
-                        const fullName = String(data || '');
-                        const safeName = escapeHtml(fullName);
-                        return `<span class="product-name-cell" data-bs-toggle="tooltip" data-bs-placement="top" title="${safeName}">${safeName}</span>`;
-                    }
-                },
-                {
-                    data: 'default_code',
-                    name: 'default_code',
-                    className: 'text-center mobilenzo-column',
-                    width: '120px'
-                },
-                {
-                    data: 'category_display',
-                    name: 'category_display',
-                    className: 'text-center mobilenzo-column',
-                    width: '150px',
-                    render: function(data, type, row) {
-                        // Return HTML as-is from server (already formatted as rectangle)
-                        return data || '<span style="display: inline-block; padding: 6px 12px; border: 1px solid #6c757d; border-radius: 4px; background-color: transparent; color: #6c757d; font-size: 12px; font-weight: 500; text-align: center; min-width: 80px;">No Category</span>';
-                    }
-                },
-                {
-                    data: 'list_price',
-                    name: 'list_price',
-                    className: 'text-center mobilenzo-column',
-                    render: function(data, type, row) {
-                        // Format price with proper number formatting
-                        const ourPrice = parseFloat(data) || 0;
-                        const formattedPrice = ourPrice > 0 ? ourPrice.toFixed(2) : '0.00';
+            {
+                data: 'default_code',
+                name: 'default_code',
+                className: 'text-center mobilenzo-column',
+                width: '120px'
+            },
+            {
+                data: 'category_display',
+                name: 'category_display',
+                className: 'text-center mobilenzo-column',
+                width: '150px',
+                render: function(data) {
+                    return data || '<span style="display: inline-block; padding: 6px 12px; border: 1px solid #6c757d; border-radius: 4px; background-color: transparent; color: #6c757d; font-size: 12px; font-weight: 500; text-align: center; min-width: 80px;">No Category</span>';
+                }
+            },
+            {
+                data: 'list_price',
+                name: 'list_price',
+                className: 'text-center mobilenzo-column',
+                render: function(data, type, row) {
+                    const ourPrice = parseFloat(data) || 0;
+                    const formattedPrice = ourPrice > 0 ? ourPrice.toFixed(2) : '0.00';
 
-                        // Check all competitor prices to determine if we're winning or losing
-                        let priceColorClass = 'text-primary'; // default
-                        let hasCompetitorPrices = false;
-                        let isLowerThanAny = false;
-                        let isHigherThanAny = false;
-
-                        @foreach ($competitors as $competitor)
-                        {
-                            const competitorPrice{{ $competitor->id }} = parseFloat(row.competitor_price_{{ $competitor->id }}) || 0;
-                            if (competitorPrice{{ $competitor->id }} > 0 && ourPrice > 0) {
-                                hasCompetitorPrices = true;
-                                if (ourPrice < competitorPrice{{ $competitor->id }}) {
-                                    isLowerThanAny = true; // We're lower (winning) - Green
-                                }
-                                if (ourPrice > competitorPrice{{ $competitor->id }}) {
-                                    isHigherThanAny = true; // We're higher (losing) - Red
-                                }
-                            }
+                    let hasCompetitorPrices = false;
+                    let isLowerThanAny = false;
+                    let isHigherThanAny = false;
+                    @foreach ($competitors as $competitor)
+                    {
+                        const cp = parseFloat(row.competitor_price_{{ $competitor->id }}) || 0;
+                        if (cp > 0 && ourPrice > 0) {
+                            hasCompetitorPrices = true;
+                            if (ourPrice < cp) isLowerThanAny = true;
+                            if (ourPrice > cp) isHigherThanAny = true;
                         }
-                        @endforeach
+                    }
+                    @endforeach
 
-                        // Determine color: Green if we're lower than any competitor, Red if we're higher than any
-                        if (hasCompetitorPrices) {
-                            if (isLowerThanAny) {
-                                priceColorClass = 'text-success'; // We're winning (lower than at least one competitor) - Green
-                            } else if (isHigherThanAny) {
-                                priceColorClass = 'text-danger'; // We're losing (higher than at least one competitor) - Red
-                            }
-                        }
+                    let priceColorClass = '';
+                    if (hasCompetitorPrices) {
+                        if (isLowerThanAny) priceColorClass = 'text-success';
+                        else if (isHigherThanAny) priceColorClass = 'text-danger';
+                    }
 
-                        return `
-                        <div class="d-flex justify-content-center align-items-center" style="gap: 0.5rem;">
-                            <span class="fw-bold ${priceColorClass}" style="font-size: 1rem; min-width: 60px;">$${formattedPrice}</span>
-                            <a href="javascript:void(0)" class="text-primary edit-price-btn" 
-                               data-product-id="${row.odoo_id}" 
-                               data-current-price="${data}"
-                               title="Edit Price"
-                               style="opacity: 0.7; transition: opacity 0.2s; margin-left: 0.5rem;">
-                                <i class="fas fa-edit fs-6"></i>
-                            </a>
-                        </div>`;
+                    return `
+                    <div class="d-flex justify-content-center align-items-center" style="gap: 0.5rem;">
+                        <span class="fw-bold ${priceColorClass}" style="font-size: 1rem; min-width: 60px;">$${formattedPrice}</span>
+                        <a href="javascript:void(0)" class="text-primary edit-price-btn"
+                           data-product-id="${row.odoo_id}"
+                           data-current-price="${data}"
+                           title="Edit Price"
+                           style="opacity: 0.7; transition: opacity 0.2s; margin-left: 0.5rem;">
+                            <i class="fas fa-edit fs-6"></i>
+                        </a>
+                    </div>`;
+                }
+            },
+            {
+                data: 'cost',
+                name: 'cost',
+                className: 'text-center mobilenzo-column',
+                render: function(data) {
+                    const cost = parseFloat(data) || 0;
+                    const formattedCost = cost > 0 ? cost.toFixed(2) : '0.00';
+                    return `<span class="fw-bold" style="font-size: 1rem; min-width: 60px;">$${formattedCost}</span>`;
+                }
+            },
+            @foreach ($competitors as $competitor)
+            {
+                data: 'competitor_link_{{ $competitor->id }}',
+                name: 'competitor_link_{{ $competitor->id }}',
+                className: 'text-center competitor-column',
+                orderable: false,
+                render: function(data, type, row) {
+                    const competitorLink = data || '';
+                    const competitorPrice = parseFloat(row.competitor_price_{{ $competitor->id }}) || 0;
+                    const formattedPrice = competitorPrice > 0 ? competitorPrice.toFixed(2) : '0.00';
+                    return `
+                    <div class="d-flex justify-content-center align-items-center" style="gap: 0.5rem;">
+                        <span class="fw-bold" style="font-size: 1rem; min-width: 60px;">$${formattedPrice}</span>
+                        <a href="javascript:void(0)" class="add-link-btn ${competitorLink ? 'text-primary' : 'text-muted'}"
+                           data-row-id="{{ $competitor->id }}"
+                           data-product-id="${row.id}"
+                           data-current-link="${competitorLink}"
+                           data-competitor-name="{{ $competitor->name }}"
+                           data-competitor-shortname="{{ $competitor->shortname }}"
+                           data-competitor-website="{{ $competitor->website }}"
+                           title="${competitorLink ? 'Edit {{ $competitor->shortname ?? $competitor->name }} Link (Click to edit, Ctrl+Click to open)' : 'Add {{ $competitor->shortname ?? $competitor->name }} Link'}"
+                           style="opacity: 0.7; transition: opacity 0.2s; margin-left: 0.5rem;">
+                            <i class="fas fa-link fs-6"></i>
+                        </a>
+                    </div>`;
+                }
+            },
+            @endforeach
+            {
+                data: 'action',
+                name: 'action',
+                className: 'text-center mobilenzo-column',
+                searchable: false,
+                orderable: false,
+                width: '60px'
+            },
+        ];
+
+        const originalTheadHtml = $('#datatable thead').prop('outerHTML');
+
+        function normalizeColumnOrder(savedOrder, cols) {
+            const keys = cols.map(c => String(c.data || ''));
+            if (!Array.isArray(savedOrder) || savedOrder.length === 0) return keys;
+            const kept = savedOrder.filter(k => keys.includes(k));
+            const missing = keys.filter(k => !kept.includes(k));
+            return kept.concat(missing);
+        }
+
+        function applyColumnOrderToColumns(orderKeys, cols) {
+            const byKey = {};
+            cols.forEach(c => { byKey[String(c.data || '')] = c; });
+            return orderKeys.map(k => byKey[k]).filter(Boolean);
+        }
+
+        function reorderTableHeader(orderKeys) {
+            const $row = $('#datatable thead tr.userDatatable-header');
+            const $ths = $row.children('th');
+            if (!$ths.length) return;
+
+            const baseKeys = baseColumns.map(c => String(c.data || ''));
+            if ($ths.length !== baseKeys.length) return;
+
+            const thByKey = {};
+            $ths.each(function(i) { thByKey[baseKeys[i]] = this; });
+            const frag = document.createDocumentFragment();
+            orderKeys.forEach(k => { if (thByKey[k]) frag.appendChild(thByKey[k]); });
+            $row[0].appendChild(frag);
+        }
+
+        function makeHeadersDraggable(tableInstance) {
+            const $ths = $('#datatable thead tr.userDatatable-header th');
+            $ths.each(function() {
+                if ($(this).find('#selectAllProducts').length) return;
+                this.setAttribute('draggable', 'true');
+                this.classList.add('dt-draggable-th');
+            });
+
+            let dragFromIndex = null;
+            $('#datatable thead').off('dragstart.dtcol dragover.dtcol drop.dtcol dragend.dtcol dragleave.dtcol');
+
+            $('#datatable thead').on('dragstart.dtcol', 'th.dt-draggable-th', function(e) {
+                dragFromIndex = $(this).index();
+                e.originalEvent.dataTransfer.effectAllowed = 'move';
+                try { e.originalEvent.dataTransfer.setData('text/plain', ''); } catch (err) {}
+                $(this).addClass('dt-dragging');
+            });
+
+            $('#datatable thead').on('dragover.dtcol', 'th.dt-draggable-th', function(e) {
+                e.preventDefault();
+                e.originalEvent.dataTransfer.dropEffect = 'move';
+                $(this).addClass('dt-dragover');
+            });
+
+            $('#datatable thead').on('dragleave.dtcol', 'th.dt-draggable-th', function() {
+                $(this).removeClass('dt-dragover');
+            });
+
+            $('#datatable thead').on('drop.dtcol', 'th.dt-draggable-th', function(e) {
+                e.preventDefault();
+                const dragToIndex = $(this).index();
+                $('#datatable thead th').removeClass('dt-dragover dt-dragging');
+                if (dragFromIndex === null || dragToIndex === null || dragFromIndex === dragToIndex) return;
+
+                const settings = tableInstance.settings()[0];
+                const currentCols = settings.aoColumns || [];
+                const currentKeys = currentCols.map(c => String(c.data || ''));
+                const fromKey = currentKeys[dragFromIndex];
+                const toKey = currentKeys[dragToIndex];
+                if (!fromKey || !toKey) return;
+
+                const newKeys = currentKeys.slice();
+                const fromPos = newKeys.indexOf(fromKey);
+                const toPos = newKeys.indexOf(toKey);
+                newKeys.splice(fromPos, 1);
+                newKeys.splice(toPos, 0, fromKey);
+
+                saveColumnOrder(newKeys);
+                rebuildTableWithColumnOrder(newKeys);
+            });
+
+            $('#datatable thead').on('dragend.dtcol', 'th.dt-draggable-th', function() {
+                $('#datatable thead th').removeClass('dt-dragover dt-dragging');
+                dragFromIndex = null;
+            });
+        }
+
+        function buildDataTable(columnsConfig) {
+            return $('#datatable').DataTable({
+                processing: true,
+                serverSide: true,
+                searching: false,
+                ordering: true,
+                dom: 'rt<"bottom d-flex justify-content-between align-items-center flex-wrap gap-2"l<"product-table-count-info text-center flex-grow-1 small fw-semibold text-primary">p><"clear">',
+                pageLength: getAutoPageLength(),
+                lengthMenu: [[10, 25, 50, 100, 200, 500, -1], [10, 25, 50, 100, 200, 500, 'All']],
+                language: {
+                    emptyTable: `<div class="py-4 text-center text-muted">
+                    <i class="fas fa-box-open fa-2x mb-2"></i><br>
+                    <span style="font-size: 1.1em;">No products found.</span>
+                </div>`,
+                },
+                ajax: {
+                    url: "{{ route('products.list') }}",
+                    data: function(data) {
+                        hidePageLoading();
+                        data.filter_name = $('#filterName').val();
+                        data.filter_sku = $('#filterSku').val();
+                        data.category = $('#filterCategory').val();
+                        data.competitor_id = $('#filterCompetitor').val();
+                        data.price_sort = $('#filterPriceSort').val();
+                        data.product_price_sort = $('#filterProductPriceSort').val();
+                        data.price_comparison = $('#filterPriceComparison').val();
+                    },
+                    complete: function() {
+                        $('[data-bs-toggle="tooltip"]').tooltip('dispose');
+                        $('[data-bs-toggle="tooltip"]').tooltip();
                     }
                 },
-                {
-                    data: 'cost',
-                    name: 'cost',
-                    className: 'text-center mobilenzo-column',
-                    render: function(data, type, row) {
-                        // Format cost with proper number formatting
-                        const cost = parseFloat(data) || 0;
-                        const formattedCost = cost > 0 ? cost.toFixed(2) : '0.00';
-                        return `<span class="fw-bold" style="font-size: 1rem; min-width: 60px;">$${formattedCost}</span>`;
-                    }
+                drawCallback: function() {
+                    $('.row-product-checkbox').each(function() {
+                        const id = $(this).data('product-id');
+                        $(this).prop('checked', selectedProductIds.has(String(id)));
+                    });
+                    syncSelectAllState();
+                    updateBulkActionBar();
+                    updateProductCountInfo(this.api());
+                    ensureManualLengthControl();
+                    makeHeadersDraggable($('#datatable').DataTable());
                 },
-                @foreach ($competitors as $competitor)
-                {
-                    data: 'competitor_link_{{ $competitor->id }}',
-                    name: 'competitor_link_{{ $competitor->id }}',
-                    className: 'text-center competitor-column',
-                    render: function(data, type, row) {
-                        const competitorLink = data || '';
-                        const competitorPrice = parseFloat(row.competitor_price_{{ $competitor->id }}) || 0;
-                        const formattedPrice = competitorPrice > 0 ? competitorPrice.toFixed(2) : '0.00';
+                columns: columnsConfig
+            });
+        }
 
-                        // Display price and link icon in same row with space - same format as main price column
-                        return `
-                        <div class="d-flex justify-content-center align-items-center" style="gap: 0.5rem;">
-                            <span class="fw-bold" style="font-size: 1rem; min-width: 60px;">$${formattedPrice}</span>
-                            <a href="javascript:void(0)" class="add-link-btn ${competitorLink ? 'text-primary' : 'text-muted'}"
-                               data-row-id="{{ $competitor->id }}" 
-                               data-product-id="${row.id}" 
-                               data-current-link="${competitorLink}"
-                               data-competitor-name="{{ $competitor->name }}"
-                               data-competitor-shortname="{{ $competitor->shortname }}"
-                               data-competitor-website="{{ $competitor->website }}"
-                               title="${competitorLink ? 'Edit {{ $competitor->shortname ?? $competitor->name }} Link (Click to edit, Ctrl+Click to open)' : 'Add {{ $competitor->shortname ?? $competitor->name }} Link'}"
-                               style="opacity: 0.7; transition: opacity 0.2s; margin-left: 0.5rem;">
-                                <i class="fas fa-link fs-6"></i>
-                            </a>
-                        </div>`;
-                    }
-                },
-                @endforeach
-                {
-                    data: 'action',
-                    name: 'action',
-                    className: 'text-center mobilenzo-column',
-                    searchable: false,
-                    width: '60px'
-                },
-            ]
+        let table = null;
+        function rebuildTableWithColumnOrder(orderKeys) {
+            const normalized = normalizeColumnOrder(orderKeys, baseColumns);
+            const nextColumns = applyColumnOrderToColumns(normalized, baseColumns);
+
+            const currentPage = table ? table.page() : 0;
+            const currentLen = table ? table.page.len() : getAutoPageLength();
+            const currentOrder = table ? table.order() : [];
+
+            if (table) table.destroy();
+
+            $('#datatable').find('thead').remove();
+            $('#datatable').prepend(originalTheadHtml);
+            reorderTableHeader(normalized);
+
+            table = buildDataTable(nextColumns);
+            try {
+                if (currentOrder && currentOrder.length) table.order(currentOrder);
+                table.page.len(currentLen);
+                table.page(currentPage).draw(false);
+            } catch (e) {}
+        }
+
+        const normalizedKeys = normalizeColumnOrder(getSavedColumnOrder(), baseColumns);
+        reorderTableHeader(normalizedKeys);
+        table = buildDataTable(applyColumnOrderToColumns(normalizedKeys, baseColumns));
+
+        // Make the whole selection cell clickable (better UX than clicking only the tiny checkbox)
+        $(document).on('click', '#datatable tbody td.select-col', function(e) {
+            // If user clicked directly on the checkbox, let the default 'change' handler run.
+            if ($(e.target).is('input.row-product-checkbox')) {
+                return;
+            }
+            const $checkbox = $(this).find('input.row-product-checkbox').first();
+            if (!$checkbox.length) return;
+            $checkbox.prop('checked', !$checkbox.is(':checked')).trigger('change');
         });
 
         $('#filterName, #filterSku').on('keyup', function() {
@@ -1204,6 +1349,22 @@
             }
             syncSelectAllState();
             updateBulkActionBar();
+        });
+
+        // Make "Select All" uncheck work reliably, especially from indeterminate state.
+        // If it's indeterminate and user clicks it, treat that click as "clear all".
+        $(document).on('click', '#selectAllProducts', function(e) {
+            if (this.indeterminate) {
+                if (e && typeof e.preventDefault === 'function') e.preventDefault();
+                if (e && typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+                if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+
+                selectedProductIds.clear();
+                $('.row-product-checkbox').prop('checked', false);
+                $(this).prop('checked', false).prop('indeterminate', false);
+                updateBulkActionBar();
+                return false;
+            }
         });
 
         $(document).on('change', '#selectAllProducts', function() {
@@ -1228,33 +1389,79 @@
             updateBulkActionBar();
         });
 
-        $(document).on('click', '#bulkSyncPricingBtn', function() {
+        $(document).on('click', '#bulkSyncPricingBtn', function(e) {
+            // Hard-stop any other click handlers (some modules bind delegated handlers that may navigate/reload)
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
+            if (e && typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+            if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+
             const ids = getSelectedProductIds();
             if (!ids.length) {
                 toastr.warning('Please select at least one product.');
-                return;
+                return false;
             }
 
-            showPageLoading();
+            const $btn = $(this);
+            const originalHtml = $btn.html();
+            $btn.prop('disabled', true).html(`${originalHtml} <i class="fas fa-spinner fa-spin ms-2"></i>`);
+
             $.post("{{ route('products.bulkSyncPricing') }}", {
                 _token: "{{ csrf_token() }}",
                 product_ids: ids
             }).done(function(response) {
-                hidePageLoading();
-                if (response.success) {
-                    const summary = response.summary || {};
-                    toastr.success(
-                        `Pricing updated. Source: ${summary.source_updated || 0}, Competitors: ${summary.competitor_prices_updated || 0}, Failed: ${summary.failed_products || 0}`
-                    );
-                    reloadPageAfterSuccessToast();
-                } else {
-                    toastr.error(response.message || 'Bulk pricing sync failed.');
+                $btn.prop('disabled', false).html(originalHtml);
+                if (!response || !response.success || !response.import_job) {
+                    toastr.error(response?.message || 'Bulk pricing sync failed.');
+                    return;
                 }
+
+                toastr.info(response.message || 'Pricing sync queued.');
+                startBulkPricingSyncStatusPolling(response.import_job.id);
             }).fail(function(xhr) {
-                hidePageLoading();
+                $btn.prop('disabled', false).html(originalHtml);
                 toastr.error(xhr.responseJSON?.message || 'Bulk pricing sync failed.');
             });
+
+            return false;
         });
+
+        let bulkPricingSyncPollingTimer = null;
+        let activeBulkPricingSyncJobId = null;
+
+        function startBulkPricingSyncStatusPolling(importJobId) {
+            activeBulkPricingSyncJobId = importJobId;
+            if (bulkPricingSyncPollingTimer) {
+                clearInterval(bulkPricingSyncPollingTimer);
+            }
+
+            const fetchStatus = function() {
+                $.ajax({
+                    url: "{{ route('products.bulkSyncPricingStatus', ['id' => 0]) }}".replace(/0$/, String(activeBulkPricingSyncJobId)),
+                    type: 'GET',
+                    success: function(response) {
+                        if (!response.success || !response.import_job) {
+                            return;
+                        }
+                        const job = response.import_job;
+
+                        if (job.status === 'completed' || job.status === 'failed') {
+                            clearInterval(bulkPricingSyncPollingTimer);
+                            bulkPricingSyncPollingTimer = null;
+
+                            if (job.status === 'completed') {
+                                toastr.success(job.message || 'Pricing sync completed');
+                                table.ajax.reload(null, false);
+                            } else {
+                                toastr.error(job.message || 'Pricing sync failed');
+                            }
+                        }
+                    }
+                });
+            };
+
+            fetchStatus();
+            bulkPricingSyncPollingTimer = setInterval(fetchStatus, 3000);
+        }
 
         $(document).on('click', '#bulkDeleteBtn', function() {
             const ids = getSelectedProductIds();
@@ -1292,7 +1499,9 @@
                         selectedProductIds.clear();
                         updateBulkActionBar();
                         toastr.success(response.message || 'Products deleted successfully.');
-                        reloadPageAfterSuccessToast();
+                        if (typeof table !== 'undefined' && table) {
+                            table.ajax.reload(null, false);
+                        }
                     } else {
                         toastr.error(response.message || 'Bulk delete failed.');
                     }
@@ -1344,7 +1553,9 @@
                 if (response.success) {
                     $('#bulkAssignCategoryModal').modal('hide');
                     toastr.success(response.message || 'Category updated for selected products.');
-                    reloadPageAfterSuccessToast();
+                    if (typeof table !== 'undefined' && table) {
+                        table.ajax.reload(null, false);
+                    }
                 } else {
                     toastr.error(response.message || 'Bulk category assignment failed.');
                 }
@@ -2746,15 +2957,16 @@
                     if (response.success) {
                         const importMessage = response.message || 'Import queued';
                         toastr.info(importMessage);
-                        try {
-                            sessionStorage.setItem('bulkImportToast', importMessage);
-                        } catch (e) {
-                            // no-op if storage is unavailable
-                        }
                         $('#importBulkProductsModal').modal('hide');
-                        setTimeout(function() {
-                            window.location.reload();
-                        }, 500);
+                        // No page reload; continue in background and keep existing data visible
+                        try {
+                            loadBulkImportJobs();
+                        } catch (e) {}
+                        if (response.import_job && response.import_job.id) {
+                            startBulkImportStatusPolling(response.import_job.id);
+                        } else if (typeof table !== 'undefined' && table) {
+                            table.ajax.reload(null, false);
+                        }
                     } else {
                         toastr.error(response.message || 'Import failed');
                         $('#bulkProductsResultsContent').html('<div class="alert alert-danger mb-0">' + (response.message || 'Import failed') + '</div>');
@@ -2787,6 +2999,7 @@
     });
 </script>
 <script>
+// @ts-nocheck
     $(document).ready(function() {
         toastr.options = {
             "closeButton": true,
@@ -2794,15 +3007,7 @@
             "positionClass": "toast-top-right",
             "timeOut": "3000"
         };
-        try {
-            const persistedImportToast = sessionStorage.getItem('bulkImportToast');
-            if (persistedImportToast) {
-                toastr.success(persistedImportToast);
-                sessionStorage.removeItem('bulkImportToast');
-            }
-        } catch (e) {
-            // no-op if storage is unavailable
-        }
+        // No longer persisting a toast across reloads (we avoid reloads entirely now).
         @if(session('success'))
         toastr.success("{{ session('success') }}");
         @endif

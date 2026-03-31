@@ -19,6 +19,7 @@ class BulkImportJob extends Model
         'success_count',
         'failed_count',
         'errors',
+        'meta',
         'uploaded_file_path',
         'message',
         'started_at',
@@ -27,6 +28,7 @@ class BulkImportJob extends Model
 
     protected $casts = [
         'errors' => 'array',
+        'meta' => 'array',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
     ];
