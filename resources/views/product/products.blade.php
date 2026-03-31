@@ -434,7 +434,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-link me-2"></i>Assign Competitor Link
+                    <i class="fas fa-link me-2"></i> Assign Competitor Link
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
@@ -471,7 +471,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-tags me-2"></i>Assign Category to Selected
+                    <i class="fas fa-tags me-3"></i>Assign Category to Selected
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
@@ -495,7 +495,7 @@
                     </label>
                 </div>
                 <small class="form-text text-muted d-block mt-2">
-                    <i class="fas fa-info-circle me-1"></i>If "Clear category" is checked, the category selection will be ignored.
+                    <i class="fas fa-info-circle me-2"></i> If "Clear category" is checked, the category selection will be ignored.
                 </small>
             </div>
             <div class="modal-footer">
@@ -512,7 +512,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-plus-circle me-2"></i>Add New Product
+                    <i class="fas fa-plus-circle me-3"></i> Add New Product
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
@@ -521,9 +521,9 @@
             <div class="modal-body p-4">
                 <!-- Odoo Product Entry Info -->
                 <div class="alert alert-info d-flex align-items-start mb-4" role="alert">
-                    <i class="fas fa-info-circle me-3 mt-1"></i>
+                    <!-- <i class="fas fa-info-circle me-3 mt-1"></i> -->
                     <div>
-                        <strong class="d-block mb-1">Odoo Product Entry</strong>
+                        <strong class="d-block mb-2">Odoo Product Entry</strong>
                         <small class="text-muted">Product data will be fetched from Odoo using SKU. At least one is required.</small>
                     </div>
                 </div>
@@ -531,7 +531,7 @@
                 <!-- Product Information Section -->
                 <div class="mb-4">
                     <h6 class="text-primary mb-3">
-                        <i class="fas fa-box me-2"></i>Product Information
+                        <i class="fas fa-box me-3"></i> Product Information
                     </h6>
 
                     <div class="mb-3">
@@ -541,12 +541,12 @@
                         <input type="text" class="form-control" id="addProductSku" placeholder="Enter Product SKU" required>
                         <div id="addProductSkuError" class="invalid-feedback" style="display:none;"></div>
                         <small class="form-text text-muted">
-                            <i class="fas fa-info-circle me-1"></i>Enter Product SKU to fetch product data.
+                            <i class="fas fa-info-circle me-2"></i> Enter Product SKU to fetch product data.
                         </small>
                     </div>
 
                     <div class="alert alert-warning d-flex align-items-start" role="alert" style="margin-top: 1rem;">
-                        <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+                        <i class="fas fa-exclamation-triangle me-3 mt-1"></i>
                         <small class="text-muted">Please provide SKU to fetch product from Odoo.</small>
                     </div>
                 </div>
@@ -556,7 +556,7 @@
                 <!-- Category & Competitor Section -->
                 <div class="mb-4">
                     <h6 class="text-primary mb-3">
-                        <i class="fas fa-tags me-2"></i>Category & Competitor
+                        <i class="fas fa-tags me-3"></i> Category & Competitor
                     </h6>
 
                     <div class="mb-3">
@@ -571,7 +571,7 @@
                         </select>
                         <div id="addProductCategoryError" class="invalid-feedback" style="display:none;"></div>
                         <small class="form-text text-muted">
-                            <i class="fas fa-info-circle me-1"></i>Can't find your category? Contact administrator to add a new category.
+                            <i class="fas fa-info-circle me-2"></i> Can't find your category? Contact administrator to add a new category.
                         </small>
                     </div>
 
@@ -580,7 +580,7 @@
                             Competitor URLs
                         </label>
                         <small class="form-text text-muted d-block mb-2">
-                            <i class="fas fa-info-circle me-1"></i>Add competitor URLs (optional). Price will be automatically scraped from these URLs.
+                            <i class="fas fa-info-circle me-2"></i> Add competitor URLs (optional). Price will be automatically scraped from these URLs.
                         </small>
                         <div id="competitorUrlsContainer">
                             @foreach($competitors as $competitor)
@@ -622,7 +622,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-edit me-2"></i>Edit Product
+                    <i class="fas fa-edit me-2"></i> Edit Product
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
@@ -642,7 +642,7 @@
                         </label>
                         <input type="text" class="form-control" id="editProductName" readonly style="background-color: #f8f9fa;">
                         <small class="form-text text-muted">
-                            <i class="fas fa-info-circle me-1"></i>Product name is read-only.
+                            <i class="fas fa-info-circle me-2"></i> Product name is read-only.
                         </small>
                     </div>
 
@@ -653,7 +653,7 @@
                         </label>
                         <input type="text" class="form-control" id="editProductSku" readonly style="background-color: #f8f9fa;">
                         <small class="form-text text-muted">
-                            <i class="fas fa-info-circle me-1"></i>SKU is read-only.
+                            <i class="fas fa-info-circle me-2"></i> SKU is read-only.
                         </small>
                     </div>
 
@@ -665,7 +665,7 @@
                         <input type="number" step="0.01" class="form-control" id="editProductPrice" placeholder="Enter Price" required>
                         <div id="editProductPriceError" class="invalid-feedback" style="display:none;"></div>
                         <small class="form-text text-muted">
-                            <i class="fas fa-info-circle me-1"></i>Update product price. Price will be synced to Odoo if changed.
+                            <i class="fas fa-info-circle me-2"></i> Update product price. Price will be synced to Odoo if changed.
                         </small>
                     </div>
                 </div>
@@ -691,7 +691,7 @@
                         </select>
                         <div id="editProductCategoryError" class="invalid-feedback" style="display:none;"></div>
                         <small class="form-text text-muted">
-                            <i class="fas fa-info-circle me-1"></i>Can't find your category? Contact administrator to add a new category.
+                            <i class="fas fa-info-circle me-2"></i> Can't find your category? Contact administrator to add a new category.
                         </small>
                     </div>
 
@@ -701,7 +701,7 @@
                             Competitor URLs
                         </label>
                         <small class="form-text text-muted d-block mb-2">
-                            <i class="fas fa-info-circle me-1"></i>Update competitor URLs (optional). Price will be automatically scraped from these URLs.
+                            <i class="fas fa-info-circle me-2"></i> Update competitor URLs (optional). Price will be automatically scraped from these URLs.
                         </small>
                         <div id="editCompetitorUrlsContainer">
                             @foreach($competitors as $competitor)
@@ -745,7 +745,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-edit me-2"></i>Edit Price
+                    <i class="fas fa-edit me-2"></i> Edit Price
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
@@ -803,7 +803,7 @@
                     <input type="file" class="form-control" id="priceUpdateFile" accept=".csv,.txt">
                     <div id="priceUpdateFileError" class="invalid-feedback" style="display:none;"></div>
                     <small class="form-text text-muted">
-                        <i class="fas fa-info-circle me-1"></i>Maximum file size: 10MB. Supported formats: CSV, TXT
+                        <i class="fas fa-info-circle me-2"></i> Maximum file size: 10MB. Supported formats: CSV, TXT
                     </small>
                 </div>
 
@@ -866,7 +866,7 @@
                     <input type="file" class="form-control" id="bulkProductsFile" accept=".csv,.txt">
                     <div id="bulkProductsFileError" class="invalid-feedback" style="display:none;"></div>
                     <small class="form-text text-muted">
-                        <i class="fas fa-info-circle me-1"></i>Maximum file size: 10MB. Supported formats: CSV, TXT
+                        <i class="fas fa-info-circle me-2"></i> Maximum file size: 10MB. Supported formats: CSV, TXT
                     </small>
                 </div>
 

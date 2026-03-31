@@ -93,14 +93,14 @@ div.dataTables_scrollBody table.dataTable thead > tr > td:after {
 }
 
 div.dataTables_processing {
-  position: absolute;
+  position: fixed;
   top: 50%;
   left: 50%;
+  transform: translate(-50%, -50%);
   width: 200px;
-  margin-left: -100px;
-  margin-top: -26px;
   text-align: center;
   padding: 2px;
+  z-index: 9999;
 }
 div.dataTables_processing > div:last-child {
   position: relative;
