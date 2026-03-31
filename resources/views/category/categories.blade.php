@@ -16,7 +16,7 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-body p-0">
-                        <div class="color-dark fw-500 d-flex justify-content-between mt-15 mx-4">
+                        <div class="color-dark fw-500 d-flex justify-content-between align-items-center mt-15 mx-4">
                             <div class="input-container icon-left icon-right position-relative">
                                 <span class="input-icon icon-left">
                                     <span data-feather="search"></span>
@@ -26,7 +26,7 @@
                                 </span>
                                 <input type="text" id="search" name="search" data-table="datatable"
                                        autocomplete="off"
-                                       class="form-control form-control-solid w-250px ps-12 table_search"
+                                       class="form-control form-control-solid w-250px table_search"
                                        placeholder="Search Categories">
                             </div>
                             @if(auth()->user()->isAdmin() || auth()->user()->hasPermission('category.create'))
@@ -426,9 +426,27 @@
     cursor: pointer;
 }
 
-.form-control-solid {
-    padding-left: 35px;
-    padding-right: 35px;
+/* Make the search input match other pages: consistent height + correct icon padding */
+.input-container .form-control.form-control-solid {
+    height: 38px;
+    padding-left: 2.25rem !important;
+    padding-right: 2.25rem !important;
+    border-radius: 8px;
+}
+
+.input-container .input-icon {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Feather injects inline SVGs; force them to behave like centered icons (no baseline drift) */
+.input-container .input-icon svg {
+    width: 16px;
+    height: 16px;
+    display: block;
 }
 
 .userDatatable-content small {
