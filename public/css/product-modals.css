@@ -48,6 +48,50 @@
 /* ============================================
    Reusable Modal Theme Class
    ============================================ */
+/* ============================================
+   Modal Close Button (force visible "X")
+   Works even if Bootstrap's btn-close background SVG isn't available/overridden
+   ============================================ */
+.modal .btn-close {
+    background-image: none !important;
+    background: transparent !important;
+    border: 0 !important;
+    opacity: 1 !important;
+    width: 2rem;
+    height: 2rem;
+    padding: 0.25rem !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-shadow: none !important;
+}
+
+/* Only auto-inject an X when the button has no inner content */
+.modal .btn-close:empty::before {
+    content: "×";
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* If markup includes an inner &times; span, style it consistently (single white X) */
+.modal .btn-close > span {
+    display: inline-block;
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #ffffff;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.modal .btn-close:focus,
+.modal .btn-close:active {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 .modal-themed {
     /* Modal Header */
     .modal-header {
