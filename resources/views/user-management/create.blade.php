@@ -151,9 +151,10 @@
                                     </div>
                                 </div>
                                 <div class="d-flex justify-content-end mt-4">
-                                    <a href="{{ route('user-management.index') }}" class="btn btn-light mx-1">
+                                    <button type="button" class="btn btn-light mx-1" id="cancelBtn"
+                                        data-cancel-url="{{ route('user-management.index') }}">
                                         Cancel
-                                    </a>
+                                    </button>
                                     <button type="submit" class="btn btn-primary px-4 mx-1" id="submitBtn">
                                         {{ isset($user) ? 'Update User' : 'Create User' }}
                                     </button>
@@ -172,6 +173,8 @@
 
             const form = document.getElementById('userForm');
             const submitBtn = document.getElementById('submitBtn');
+            const cancelBtn = document.getElementById('cancelBtn');
+            let isNavigatingAway = false;
             if (!form) {
                 console.error('Form not found');
                 return;
@@ -211,6 +214,7 @@
 
             // Validation functions
             function validateName() {
+                if (isNavigatingAway) return true;
                 const name = nameInput.value.trim();
                 if (!name) {
                     showError(nameInput, nameError, 'Full name is required');
@@ -233,6 +237,7 @@
             }
 
             function validateEmail() {
+                if (isNavigatingAway) return true;
                 const email = emailInput.value.trim();
                 if (!email) {
                     showError(emailInput, emailError, 'Email address is required');
@@ -248,6 +253,7 @@
 
             function validatePassword() {
                 if (!passwordFieldsExist) return true; // Skip if fields don't exist (edit mode)
+                if (isNavigatingAway) return true;
 
                 const password = passwordInput.value;
 
@@ -309,6 +315,7 @@
 
             function validatePasswordConfirmation() {
                 if (!passwordFieldsExist) return true; // Skip if fields don't exist (edit mode)
+                if (isNavigatingAway) return true;
 
                 const password = passwordInput.value;
                 const confirmation = passwordConfirmationInput.value;
@@ -335,6 +342,7 @@
             }
 
             function validatePhone() {
+                if (isNavigatingAway) return true;
                 const phone = phoneInput.value.trim();
                 if (phone && !patterns.phone.test(phone)) {
                     showError(phoneInput, phoneError, 'Please enter a valid phone number');
@@ -345,6 +353,7 @@
             }
 
             function validateWebsite() {
+                if (isNavigatingAway) return true;
                 const website = websiteInput.value.trim();
                 if (website && !patterns.website.test(website)) {
                     showError(websiteInput, websiteError,
@@ -356,6 +365,7 @@
             }
 
             function validateRole() {
+                if (isNavigatingAway) return true;
                 const role = roleSelect.value;
                 if (!role) {
                     showError(roleSelect, roleError, 'Please select a role');
@@ -468,6 +478,25 @@
                     console.log('Validation passed, allowing submission');
                 }
             });
+
+            // Cancel navigation should never trigger validation or submission
+            if (cancelBtn) {
+                const goToList = () => {
+                    const url = cancelBtn.getAttribute('data-cancel-url');
+                    if (url) window.location.href = url;
+                };
+
+                // `mousedown` fires before input blur, so we can suppress blur validators.
+                cancelBtn.addEventListener('mousedown', function() {
+                    isNavigatingAway = true;
+                });
+
+                cancelBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    isNavigatingAway = true;
+                    goToList();
+                });
+            }
 
             // Real-time validation for better UX
             const inputs = [nameInput, emailInput, phoneInput, websiteInput, roleSelect];
