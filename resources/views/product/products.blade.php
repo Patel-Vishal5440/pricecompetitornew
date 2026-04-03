@@ -277,21 +277,15 @@
     }
 
     .product-name-cell {
-        display: inline-block;
+        display: block;
         width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        /* Bigger font + clean 2-line wrap */
+        /* Show full name without truncation */
         font-size: 15px;
         font-weight: 400;
         line-height: 1.25;
         white-space: normal;
         word-break: break-word;
         overflow-wrap: anywhere;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        line-clamp: 2;
-        -webkit-box-orient: vertical;
     }
 
     /* Only product name should wrap */
