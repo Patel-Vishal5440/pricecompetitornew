@@ -2,6 +2,7 @@
 
 namespace App\Traits;
 
+use App\Services\ScraperService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\DomCrawler\Crawler;
@@ -67,59 +68,44 @@ trait ScrapesCompetitorPrice
         $html = null;
         $amount = null;
         $class = null;
-        $isMobileSentrix = str_contains($url, 'mobilesentrix.com');
 
         try {
-            if (str_contains($url, 'injuredgadgets.com')) {
-                $response = Http::timeout(30)->get('http://api.scraperapi.com', [
-                    'api_key' => env('CAPTCHA_API_KEY'),
-                    'url' => $url
-                ]);
-                if (!$response->successful()) {
-                    Log::warning('ScraperAPI failed for injuredgadgets.com', ['url' => $url, 'status' => $response->status()]);
+            // Try direct fetch first (cheap). Only use scraper providers if blocked/challenged.
+            $response = Http::withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language' => 'en-US,en;q=0.5',
+                'Accept-Encoding' => 'gzip, deflate',
+                'Connection' => 'keep-alive',
+                'Upgrade-Insecure-Requests' => '1',
+            ])->timeout(30)->get($url);
+
+            $isCloudflareChallenge = $response->header('cf-mitigated') === 'challenge'
+                || str_contains(strtolower((string) $response->body()), 'cf-challenge');
+
+            if ($response->successful() && !$isCloudflareChallenge) {
+                $html = $response->body();
+            } else {
+                /** @var ScraperService $scraper */
+                $scraper = app(ScraperService::class);
+                $scrapeResult = $scraper->scrapeOnce($url);
+
+                if (($scrapeResult['ok'] ?? false) !== true) {
+                    Log::warning('Scrape failed (direct + scraper providers)', [
+                        'url' => $url,
+                        'direct_status' => $response->status(),
+                        'provider' => $scrapeResult['provider'] ?? null,
+                        'message' => $scrapeResult['message'] ?? null,
+                    ]);
                     return null;
                 }
 
-                $html = $response->body();
+                $html = (string) ($scrapeResult['html'] ?? '');
+            }
+
+            // Keep legacy selector hint (not required, but harmless) for injuredgadgets.
+            if (str_contains($url, 'injuredgadgets.com')) {
                 $class = '.price-wrapper .price';
-            } else {
-                $response = Http::withHeaders([
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                    'Accept-Language' => 'en-US,en;q=0.5',
-                    'Accept-Encoding' => 'gzip, deflate',
-                    'Connection' => 'keep-alive',
-                    'Upgrade-Insecure-Requests' => '1',
-                ])->timeout(30)->get($url);
-
-                $isCloudflareChallenge = $response->header('cf-mitigated') === 'challenge'
-                    || str_contains(strtolower((string) $response->body()), 'cf-challenge');
-
-                if ((!$response->successful() || $isCloudflareChallenge) && $isMobileSentrix) {
-                    // MobileSentrix is frequently protected by Cloudflare challenge for server-side requests.
-                    // Use ScraperAPI fallback to fetch a challenge-bypassed HTML response.
-                    $scraperResponse = Http::timeout(45)->get('http://api.scraperapi.com', [
-                        'api_key' => env('CAPTCHA_API_KEY'),
-                        'url' => $url
-                    ]);
-
-                    if ($scraperResponse->successful()) {
-                        $html = $scraperResponse->body();
-                    } else {
-                        Log::warning('MobileSentrix ScraperAPI fallback failed', [
-                            'url' => $url,
-                            'status' => $scraperResponse->status()
-                        ]);
-                        return null;
-                    }
-                } else {
-                    if (!$response->successful()) {
-                        Log::warning('HTTP request failed', ['url' => $url, 'status' => $response->status()]);
-                        return null;
-                    }
-
-                    $html = $response->body();
-                }
             }
 
             if (empty($html)) {

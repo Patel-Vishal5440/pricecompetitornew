@@ -38,4 +38,12 @@ return [
             'api_key' => env('ODOO_API_KEY'),
             'token' => env('ODOO_TOKEN')
     ],
+
+    'scrapingbee' => [
+        'key' => env('SCRAPINGBEE_API_KEY'),
+    ],
+
+    'scraperapi' => [
+        'key' => env('SCRAPERAPI_API_KEY', env('CAPTCHA_API_KEY')),
+    ],
 ];
